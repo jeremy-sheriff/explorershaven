@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 const props = defineProps<{
     payments?: any[];
@@ -155,6 +155,34 @@ const getStudentName = (studentId: string) => {
     return student ? `${student.first_name} ${student.last_name} - ${student.adm_no}` : '';
 };
 
+// Filter fees based on selected student's grade
+const filteredFeesForAdd = computed(() => {
+    if (!paymentForm.student_id) return feesList;
+
+    const student = studentsList.find(s => s.id.toString() === paymentForm.student_id);
+    if (!student || !student.grade_id) return feesList;
+
+    return feesList.filter(f => f.grade_id === student.grade_id);
+});
+
+const filteredFeesForEdit = computed(() => {
+    if (!editForm.student_id) return feesList;
+
+    const student = studentsList.find(s => s.id.toString() === editForm.student_id);
+    if (!student || !student.grade_id) return feesList;
+
+    return feesList.filter(f => f.grade_id === student.grade_id);
+});
+
+// Watch for student changes and reset fee selection
+watch(() => paymentForm.student_id, () => {
+    paymentForm.fee_id = '';
+});
+
+watch(() => editForm.student_id, () => {
+    editForm.fee_id = '';
+});
+
 // Get fee details helper
 const getFeeDetails = (feeId: string) => {
     const fee = feesList.find(f => f.id.toString() === feeId);
@@ -274,7 +302,7 @@ const getFeeDetails = (feeId: string) => {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem v-for="student in studentsList" :key="student.id" :value="student.id.toString()">
-                                    {{ student.first_name }} {{ student.last_name }} - {{ student.adm_no }}
+                                    {{ student.first_name }} {{ student.last_name }} - {{ student.adm_no }} ({{ student.grade?.name }})
                                 </SelectItem>
                             </SelectContent>
                         </Select>
@@ -284,16 +312,17 @@ const getFeeDetails = (feeId: string) => {
                     <!-- Fee -->
                     <div class="grid gap-2">
                         <Label for="fee_id">Fee</Label>
-                        <Select v-model="paymentForm.fee_id">
+                        <Select v-model="paymentForm.fee_id" :disabled="!paymentForm.student_id">
                             <SelectTrigger>
                                 <SelectValue placeholder="Select a fee" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem v-for="fee in feesList" :key="fee.id" :value="fee.id.toString()">
-                                    {{ fee.grade?.name }} - {{ fee.term }} ({{ formatCurrency(fee.amount) }})
+                                <SelectItem v-for="fee in filteredFeesForAdd" :key="fee.id" :value="fee.id.toString()">
+                                    {{ fee.term }} ({{ formatCurrency(fee.amount) }})
                                 </SelectItem>
                             </SelectContent>
                         </Select>
+                        <span v-if="!paymentForm.student_id" class="text-xs text-muted-foreground">Select a student first</span>
                         <span v-if="paymentForm.errors.fee_id" class="text-sm text-red-600">{{ paymentForm.errors.fee_id }}</span>
                     </div>
 
@@ -375,7 +404,7 @@ const getFeeDetails = (feeId: string) => {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem v-for="student in studentsList" :key="student.id" :value="student.id.toString()">
-                                    {{ student.first_name }} {{ student.last_name }} - {{ student.adm_no }}
+                                    {{ student.first_name }} {{ student.last_name }} - {{ student.adm_no }} ({{ student.grade?.name }})
                                 </SelectItem>
                             </SelectContent>
                         </Select>
@@ -385,16 +414,17 @@ const getFeeDetails = (feeId: string) => {
                     <!-- Fee -->
                     <div class="grid gap-2">
                         <Label for="edit_fee_id">Fee</Label>
-                        <Select v-model="editForm.fee_id">
+                        <Select v-model="editForm.fee_id" :disabled="!editForm.student_id">
                             <SelectTrigger>
                                 <SelectValue placeholder="Select a fee" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem v-for="fee in feesList" :key="fee.id" :value="fee.id.toString()">
-                                    {{ fee.grade?.name }} - {{ fee.term }} ({{ formatCurrency(fee.amount) }})
+                                <SelectItem v-for="fee in filteredFeesForEdit" :key="fee.id" :value="fee.id.toString()">
+                                    {{ fee.term }} ({{ formatCurrency(fee.amount) }})
                                 </SelectItem>
                             </SelectContent>
                         </Select>
+                        <span v-if="!editForm.student_id" class="text-xs text-muted-foreground">Select a student first</span>
                         <span v-if="editForm.errors.fee_id" class="text-sm text-red-600">{{ editForm.errors.fee_id }}</span>
                     </div>
 
