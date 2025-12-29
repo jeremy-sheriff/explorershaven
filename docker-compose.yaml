@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: school_app_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: q8wKV5987jVFoD
+      MYSQL_DATABASE: school_app
+      MYSQL_USER: school_admin
+      MYSQL_PASSWORD: yTWv6Fn4R4jaNy
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - school_network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  school_network:
+    driver: bridge
