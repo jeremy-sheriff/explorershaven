@@ -6,12 +6,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FeePaymentController;
 use App\Http\Controllers\StudentController;
 
-//Route::get('/', function () {
-//    return Inertia::render('Welcome', [
-//        'canRegister' => Features::enabled(Features::registration()),
-//    ]);
-//})->name('home');
-
 Route::get('/',function (){
     return redirect('/login');
 })->name('home');
