@@ -25,6 +25,10 @@ Route::delete('/students/{student}', [StudentController::class, 'destroy'])->nam
 Route::get('/fees', [FeeController::class, 'index'])->name('fees.index');
 Route::get('/fee-payments', [FeePaymentController::class, 'index'])->name('fee-payments.index');
 
+Route::post('/fee-payments', [FeePaymentController::class, 'store'])->name('fee-payments.store');
+Route::put('/fee-payments/{feePayment}', [FeePaymentController::class, 'update'])->name('fee-payments.update');
+Route::delete('/fee-payments/{feePayment}', [FeePaymentController::class, 'destroy'])->name('fee-payments.destroy');
+
 
 
 

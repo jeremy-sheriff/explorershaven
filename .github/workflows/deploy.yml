@@ -1,9 +1,8 @@
 name: Deploy School app on MediCareer domain
-
 on:
   push:
     branches: [main]
-
+#    comment
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -12,18 +11,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build assets
-        run: npm run build
 
       - name: Upload via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -44,15 +31,3 @@ jobs:
             **/tests/**
             **/*.md
             .env
-
-      - name: Copy build to public_html via SSH
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: 22
-          script: |
-            rm -rf /home/medicar2/domains/explorershaven.medicareers.co.ke/public_html/build
-            cp -r /home/medicar2/domains/explorershaven.medicareers.co.ke/public/build /home/medicar2/domains/explorershaven.medicareers.co.ke/public_html/
-            echo "Build files copied successfully"
