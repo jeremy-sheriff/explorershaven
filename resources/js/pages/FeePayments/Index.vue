@@ -24,22 +24,50 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ref, computed, watch } from 'vue';
+import { Filter, X } from 'lucide-vue-next';
 
 const props = defineProps<{
     payments?: any[];
     students?: any[];
     fees?: any[];
     credits?: Record<string, any[]>;
+    grades?: any[];
+    terms?: string[];
+    filters?: {
+        grade?: string;
+        term?: string;
+        status?: string;
+        student?: string;
+        date_from?: string;
+        date_to?: string;
+        has_balance?: string;
+        sort_balance?: string;
+    };
 }>();
 
 const paymentList = props.payments || [];
 const studentsList = props.students || [];
 const feesList = props.fees || [];
 const creditsData = props.credits || {};
+const gradesList = props.grades || [];
+const termsList = props.terms || [];
 
 const openAddPayment = ref(false);
 const openEditPayment = ref(false);
 const selectedEditPaymentId = ref<number | null>(null);
+const showFilters = ref(false);
+
+// Filter form
+const filterForm = useForm({
+    grade: props.filters?.grade || 'all',
+    term: props.filters?.term || 'all',
+    status: props.filters?.status || 'all',
+    student: props.filters?.student || 'all',
+    date_from: props.filters?.date_from || '',
+    date_to: props.filters?.date_to || '',
+    has_balance: props.filters?.has_balance || 'all',
+    sort_balance: props.filters?.sort_balance || 'all',
+});
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -121,6 +149,78 @@ const handleDelete = (paymentId: number) => {
         router.delete(`/fee-payments/${paymentId}`);
     }
 };
+
+// Filter handlers
+const applyFilters = () => {
+    // Build query params, excluding 'all' values
+    const params: Record<string, string> = {};
+
+    if (filterForm.grade && filterForm.grade !== 'all') {
+        params.grade = filterForm.grade;
+    }
+    if (filterForm.term && filterForm.term !== 'all') {
+        params.term = filterForm.term;
+    }
+    if (filterForm.status && filterForm.status !== 'all') {
+        params.status = filterForm.status;
+    }
+    if (filterForm.student && filterForm.student !== 'all') {
+        params.student = filterForm.student;
+    }
+    if (filterForm.date_from) {
+        params.date_from = filterForm.date_from;
+    }
+    if (filterForm.date_to) {
+        params.date_to = filterForm.date_to;
+    }
+    if (filterForm.has_balance && filterForm.has_balance !== 'all') {
+        params.has_balance = filterForm.has_balance;
+    }
+    if (filterForm.sort_balance && filterForm.sort_balance !== 'all') {
+        params.sort_balance = filterForm.sort_balance;
+    }
+
+    // Use router.get instead of filterForm.get for better reactivity
+    router.get('/fee-payments', params, {
+        preserveState: false,
+        preserveScroll: false,
+        only: ['payments', 'filters'],
+    });
+};
+
+// Update the clearFilters function:
+const clearFilters = () => {
+    filterForm.grade = 'all';
+    filterForm.term = 'all';
+    filterForm.status = 'all';
+    filterForm.student = 'all';
+    filterForm.date_from = '';
+    filterForm.date_to = '';
+    filterForm.has_balance = 'all';
+    filterForm.sort_balance = 'all';
+
+    // Use router.get to clear filters
+    router.get('/fee-payments', {}, {
+        preserveState: false,
+        preserveScroll: false,
+    });
+};
+
+
+// Update the hasActiveFilters computed:
+const hasActiveFilters = computed(() => {
+    return !!(
+        (filterForm.grade && filterForm.grade !== 'all') ||
+        (filterForm.term && filterForm.term !== 'all') ||
+        (filterForm.status && filterForm.status !== 'all') ||
+        (filterForm.student && filterForm.student !== 'all') ||
+        filterForm.date_from ||
+        filterForm.date_to ||
+        (filterForm.has_balance && filterForm.has_balance !== 'all') ||
+        (filterForm.sort_balance && filterForm.sort_balance !== 'all')
+    );
+});
+
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-KE', {
@@ -232,12 +332,209 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                 <div class="p-6">
                     <div class="mb-4 flex items-center justify-between">
                         <h2 class="text-xl font-semibold">Fee Payments</h2>
-                        <button
-                            @click="handleCreate"
-                            class="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
-                        >
-                            + Record Payment
-                        </button>
+                        <div class="flex gap-2">
+                            <Button
+                                variant="outline"
+                                @click="showFilters = !showFilters"
+                                class="gap-2"
+                            >
+                                <Filter class="h-4 w-4" />
+                                Filters
+                                <span v-if="hasActiveFilters" class="ml-1 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
+                                    Active
+                                </span>
+                            </Button>
+                            <button
+                                @click="handleCreate"
+                                class="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
+                            >
+                                + Record Payment
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filter Panel -->
+                    <div v-if="showFilters" class="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-sidebar-accent">
+                        <div class="mb-4 flex items-center justify-between">
+                            <h3 class="font-semibold">Filter Payments</h3>
+                            <Button
+                                v-if="hasActiveFilters"
+                                variant="ghost"
+                                size="sm"
+                                @click="clearFilters"
+                                class="gap-2 text-red-600 hover:text-red-700"
+                            >
+                                <X class="h-4 w-4" />
+                                Clear All
+                            </Button>
+                        </div>
+
+                        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                            <!-- Grade Filter -->
+                            <div class="grid gap-2">
+                                <Label>Grade</Label>
+                                <Select v-model="filterForm.grade">
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="All Grades" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Grades</SelectItem>
+                                        <SelectItem v-for="grade in gradesList" :key="grade.id" :value="grade.id.toString()">
+                                            {{ grade.name }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <!-- Term Filter -->
+                            <div class="grid gap-2">
+                                <Label>Term</Label>
+                                <Select v-model="filterForm.term">
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="All Terms" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Terms</SelectItem>
+                                        <SelectItem v-for="term in termsList" :key="term" :value="term">
+                                            {{ term }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <!-- Status Filter -->
+                            <div class="grid gap-2">
+                                <Label>Status</Label>
+                                <Select v-model="filterForm.status">
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="All Statuses" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Statuses</SelectItem>
+                                        <SelectItem value="paid">Paid</SelectItem>
+                                        <SelectItem value="partial">Partial</SelectItem>
+                                        <SelectItem value="pending">Pending</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <!-- Student Filter -->
+                            <div class="grid gap-2">
+                                <Label>Student</Label>
+                                <Select v-model="filterForm.student">
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="All Students" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Students</SelectItem>
+                                        <SelectItem v-for="student in studentsList" :key="student.id" :value="student.id.toString()">
+                                            {{ student.first_name }} {{ student.last_name }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <!-- Date From -->
+                            <div class="grid gap-2">
+                                <Label for="date_from">Date From</Label>
+                                <Input
+                                    id="date_from"
+                                    v-model="filterForm.date_from"
+                                    type="date"
+                                    class="w-full"
+                                />
+                            </div>
+
+                            <!-- Date To -->
+                            <div class="grid gap-2">
+                                <Label for="date_to">Date To</Label>
+                                <Input
+                                    id="date_to"
+                                    v-model="filterForm.date_to"
+                                    type="date"
+                                    class="w-full"
+                                />
+                            </div>
+
+                            <!-- Has Balance Filter -->
+                            <div class="grid gap-2">
+                                <Label>Balance Status</Label>
+                                <Select v-model="filterForm.has_balance">
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="All" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All</SelectItem>
+                                        <SelectItem value="yes">Has Balance</SelectItem>
+                                        <SelectItem value="no">Fully Paid</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <!-- Sort by Balance -->
+                            <div class="grid gap-2">
+                                <Label>Sort by Balance</Label>
+                                <Select v-model="filterForm.sort_balance">
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Default" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Default (Latest First)</SelectItem>
+                                        <SelectItem value="asc">Balance: Low to High</SelectItem>
+                                        <SelectItem value="desc">Balance: High to Low</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex justify-end gap-2">
+                            <Button variant="outline" @click="showFilters = false">
+                                Close
+                            </Button>
+                            <Button @click="applyFilters" :disabled="filterForm.processing">
+                                Apply Filters
+                            </Button>
+                        </div>
+                    </div>
+                    <!-- Active Filters Display -->
+                    <div v-if="hasActiveFilters && !showFilters" class="mb-4 flex flex-wrap gap-2">
+                        <span class="text-sm text-muted-foreground">Active filters:</span>
+                        <span v-if="filterForm.grade && filterForm.grade !== 'all'" class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs">
+        Grade: {{ gradesList.find(g => g.id.toString() === filterForm.grade)?.name }}
+        <button @click="filterForm.grade = 'all'; applyFilters()" class="hover:text-red-600">
+            <X class="h-3 w-3" />
+        </button>
+    </span>
+                        <span v-if="filterForm.term && filterForm.term !== 'all'" class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs">
+        Term: {{ filterForm.term }}
+        <button @click="filterForm.term = 'all'; applyFilters()" class="hover:text-red-600">
+            <X class="h-3 w-3" />
+        </button>
+    </span>
+                        <span v-if="filterForm.status && filterForm.status !== 'all'" class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs">
+        Status: {{ filterForm.status }}
+        <button @click="filterForm.status = 'all'; applyFilters()" class="hover:text-red-600">
+            <X class="h-3 w-3" />
+        </button>
+    </span>
+                        <span v-if="filterForm.student && filterForm.student !== 'all'" class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs">
+        Student: {{ studentsList.find(s => s.id.toString() === filterForm.student)?.first_name }}
+        <button @click="filterForm.student = 'all'; applyFilters()" class="hover:text-red-600">
+            <X class="h-3 w-3" />
+        </button>
+    </span>
+                        <span v-if="filterForm.date_from" class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs">
+        From: {{ filterForm.date_from }}
+        <button @click="filterForm.date_from = ''; applyFilters()" class="hover:text-red-600">
+            <X class="h-3 w-3" />
+        </button>
+    </span>
+                        <span v-if="filterForm.date_to" class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs">
+        To: {{ filterForm.date_to }}
+        <button @click="filterForm.date_to = ''; applyFilters()" class="hover:text-red-600">
+            <X class="h-3 w-3" />
+        </button>
+    </span>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -298,6 +595,14 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                             </tr>
                             </tbody>
                         </table>
+
+                        <!-- Empty State -->
+                        <div v-if="paymentList.length === 0" class="py-12 text-center">
+                            <p class="text-muted-foreground">No payments found matching your filters.</p>
+                            <Button v-if="hasActiveFilters" variant="outline" class="mt-4" @click="clearFilters">
+                                Clear Filters
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </div>
