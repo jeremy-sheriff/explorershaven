@@ -29,11 +29,13 @@ const props = defineProps<{
     payments?: any[];
     students?: any[];
     fees?: any[];
+    credits?: Record<string, any[]>;
 }>();
 
 const paymentList = props.payments || [];
 const studentsList = props.students || [];
 const feesList = props.fees || [];
+const creditsData = props.credits || {};
 
 const openAddPayment = ref(false);
 const openEditPayment = ref(false);
@@ -188,6 +190,16 @@ const getFeeDetails = (feeId: string) => {
     const fee = feesList.find(f => f.id.toString() === feeId);
     return fee ? `${fee.grade?.name} - ${fee.term} (${formatCurrency(fee.amount)})` : '';
 };
+
+// Get available credit for a student
+const getStudentCredit = (studentId: string) => {
+    const studentCredits = creditsData[studentId] || [];
+    const totalCredit = studentCredits.reduce((sum, credit) => sum + parseFloat(credit.amount || 0), 0);
+    return totalCredit;
+};
+
+// Calculate total credits
+const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => sum + parseFloat(credit.amount || 0), 0);
 </script>
 
 <template>
@@ -196,7 +208,7 @@ const getFeeDetails = (feeId: string) => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
             <!-- Stats Cards -->
-            <div class="grid auto-rows-min gap-4 md:grid-cols-3">
+            <div class="grid auto-rows-min gap-4 md:grid-cols-4">
                 <div class="relative overflow-hidden rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border">
                     <div class="text-sm font-medium text-muted-foreground">Total Payments</div>
                     <div class="text-2xl font-bold">{{ paymentList.length }}</div>
@@ -208,6 +220,10 @@ const getFeeDetails = (feeId: string) => {
                 <div class="relative overflow-hidden rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border">
                     <div class="text-sm font-medium text-muted-foreground">Paid / Pending</div>
                     <div class="text-2xl font-bold">{{ paidCount }} / {{ pendingCount }}</div>
+                </div>
+                <div class="relative overflow-hidden rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border">
+                    <div class="text-sm font-medium text-muted-foreground">Available Credits</div>
+                    <div class="text-2xl font-bold text-green-600 dark:text-green-400">{{ formatCurrency(totalCredits) }}</div>
                 </div>
             </div>
 
@@ -232,6 +248,7 @@ const getFeeDetails = (feeId: string) => {
                                 <th class="px-6 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Grade</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Term</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Amount Paid</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Balance</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Payment Date</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Status</th>
                                 <th class="px-6 py-3 text-right text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Actions</th>
@@ -251,6 +268,14 @@ const getFeeDetails = (feeId: string) => {
                                 </td>
                                 <td class="whitespace-nowrap px-6 py-4 text-sm font-semibold">
                                     {{ formatCurrency(payment.amount_paid) }}
+                                </td>
+                                <td class="whitespace-nowrap px-6 py-4 text-sm">
+                                    <span v-if="payment.balance > 0" class="font-semibold text-orange-600 dark:text-orange-400">
+                                        {{ formatCurrency(payment.balance) }}
+                                    </span>
+                                    <span v-else class="font-semibold text-green-600 dark:text-green-400">
+                                        Paid
+                                    </span>
                                 </td>
                                 <td class="whitespace-nowrap px-6 py-4 text-sm">
                                     {{ formatDate(payment.payment_date) }}
@@ -307,6 +332,17 @@ const getFeeDetails = (feeId: string) => {
                             </SelectContent>
                         </Select>
                         <span v-if="paymentForm.errors.student_id" class="text-sm text-red-600">{{ paymentForm.errors.student_id }}</span>
+
+                        <!-- Show available credit if exists -->
+                        <div v-if="paymentForm.student_id && getStudentCredit(paymentForm.student_id) > 0"
+                             class="rounded-lg bg-green-50 p-3 dark:bg-green-900/20">
+                            <p class="text-sm font-medium text-green-800 dark:text-green-200">
+                                💰 Available Credit: {{ formatCurrency(getStudentCredit(paymentForm.student_id)) }}
+                            </p>
+                            <p class="text-xs text-green-600 dark:text-green-400">
+                                This credit can be applied to future fees
+                            </p>
+                        </div>
                     </div>
 
                     <!-- Fee -->
@@ -409,6 +445,14 @@ const getFeeDetails = (feeId: string) => {
                             </SelectContent>
                         </Select>
                         <span v-if="editForm.errors.student_id" class="text-sm text-red-600">{{ editForm.errors.student_id }}</span>
+
+                        <!-- Show available credit if exists -->
+                        <div v-if="editForm.student_id && getStudentCredit(editForm.student_id) > 0"
+                             class="rounded-lg bg-green-50 p-3 dark:bg-green-900/20">
+                            <p class="text-sm font-medium text-green-800 dark:text-green-200">
+                                💰 Available Credit: {{ formatCurrency(getStudentCredit(editForm.student_id)) }}
+                            </p>
+                        </div>
                     </div>
 
                     <!-- Fee -->

@@ -21,10 +21,10 @@ class DatabaseSeeder extends Seeder
         ]);*/
 
         $this->call([
-            GradeSeeder::class,
-            GuardianSeeder::class,
-            StudentSeeder::class,
-            FeeSeeder::class,
+//            GradeSeeder::class,
+//            GuardianSeeder::class,
+//            StudentSeeder::class,
+//            FeeSeeder::class,
             FeePaymentSeeder::class,
         ]);
     }
