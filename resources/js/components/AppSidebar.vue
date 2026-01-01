@@ -20,6 +20,7 @@ import students from "@/routes/students";
 import fees from "@/routes/fees";
 import { dashboard } from '@/routes';
 import feePayments from "@/routes/fee-payments";
+import feeCredits from "@/routes/fee-credits";
 
 const mainNavItems: NavItem[] = [
     {
@@ -40,6 +41,12 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Fee Payments',
         href: feePayments.index(),
+        icon: Receipt,
+    },
+
+    {
+        title: 'Fee Credits',
+        href: feeCredits.index(),
         icon: Receipt,
     },
 ];

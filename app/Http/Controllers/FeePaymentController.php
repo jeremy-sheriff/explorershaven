@@ -15,6 +15,17 @@ class FeePaymentController extends Controller
 {
     public function index(Request $request)
     {
+        // Determine current term based on current month
+        $currentMonth = now()->month;
+        $currentYear = 2025;
+
+        $currentTerm = match(true) {
+            $currentMonth >= 1 && $currentMonth <= 4 => "Term 1 {$currentYear}",
+            $currentMonth >= 5 && $currentMonth <= 8 => "Term 2 {$currentYear}",
+            $currentMonth >= 9 && $currentMonth <= 12 => "Term 3 {$currentYear}",
+            default => "Term 1 {$currentYear}"
+        };
+
         $query = FeePayment::with(['student.grade', 'fee.grade']);
 
         // Filter by grade (ignore if 'all' or empty)
@@ -68,17 +79,53 @@ class FeePaymentController extends Controller
 
         $payments = $query->get();
         $students = Student::with('grade')->get();
-        $fees = Fee::with('grade')->get();
+
+        // Only get fees for the current term
+        $fees = Fee::with('grade')
+            ->where('term', $currentTerm)
+            ->get();
+
         $grades = Grade::all();
 
-        // Get unique terms
-        $terms = Fee::distinct()->pluck('term');
+        // Only show current term
+        $terms = [$currentTerm];
 
-        // Get available credits for each student
-        $credits = FeeCredit::where('status', 'available')
+        // Get available credits for each student with adjusted amounts
+        $creditsData = FeeCredit::where('status', 'available')
             ->with(['student', 'appliedToFee'])
             ->get()
             ->groupBy('student_id');
+
+        // Calculate adjusted balances for current term fees considering available credits
+        $adjustedBalances = [];
+        foreach ($students as $student) {
+            $studentId = $student->id;
+
+            // Get available credit for this student
+            $availableCredit = $creditsData->get($studentId)?->sum('amount') ?? 0;
+
+            // Get current term fees for this student's grade
+            $currentTermFees = $fees->where('grade_id', $student->grade_id);
+
+            foreach ($currentTermFees as $fee) {
+                // Calculate total paid for this fee
+                $totalPaid = FeePayment::where('student_id', $studentId)
+                    ->where('fee_id', $fee->id)
+                    ->sum('amount_paid');
+
+                // Calculate raw balance
+                $rawBalance = $fee->amount - $totalPaid;
+
+                // Apply available credit to balance
+                $adjustedBalance = max(0, $rawBalance - $availableCredit);
+
+                $adjustedBalances[$studentId][$fee->id] = [
+                    'raw_balance' => $rawBalance,
+                    'adjusted_balance' => $adjustedBalance,
+                    'credit_applied' => min($rawBalance, $availableCredit)
+                ];
+            }
+        }
 
         return Inertia::render('FeePayments/Index', [
             'payments' => $payments,
@@ -86,7 +133,9 @@ class FeePaymentController extends Controller
             'fees' => $fees,
             'grades' => $grades,
             'terms' => $terms,
-            'credits' => $credits,
+            'credits' => $creditsData,
+            'adjustedBalances' => $adjustedBalances,
+            'currentTerm' => $currentTerm,
             'filters' => $request->only(['grade', 'term', 'status', 'student', 'date_from', 'date_to', 'has_balance', 'sort_balance']),
         ]);
     }

@@ -31,8 +31,10 @@ const props = defineProps<{
     students?: any[];
     fees?: any[];
     credits?: Record<string, any[]>;
+    adjustedBalances?: Record<string, Record<string, { raw_balance: number; adjusted_balance: number; credit_applied: number }>>;
     grades?: any[];
     terms?: string[];
+    currentTerm?: string;
     filters?: {
         grade?: string;
         term?: string;
@@ -263,19 +265,41 @@ const filteredFeesForEdit = computed(() => {
     return feesList.filter(f => f.grade_id === student.grade_id);
 });
 
+// Get adjusted balance considering available credits
+const getAdjustedBalance = (studentId: string, feeId: string) => {
+    if (!props.adjustedBalances) return null;
+
+    const studentBalances = props.adjustedBalances[studentId];
+    if (!studentBalances) return null;
+
+    const feeBalance = studentBalances[feeId];
+    return feeBalance ? feeBalance.adjusted_balance : null;
+};
+
 const currentBalanceForAdd = computed(() => {
     if (!paymentForm.student_id || !paymentForm.fee_id) return null;
 
     const studentId = paymentForm.student_id;
     const feeId = paymentForm.fee_id;
 
+    // Check if we have adjusted balance data
+    const adjustedBalance = getAdjustedBalance(studentId, feeId);
+    if (adjustedBalance !== null) {
+        return adjustedBalance;
+    }
+
+    // Fallback to existing logic
     const existingPayments = paymentList.filter(
         p => p.student_id.toString() === studentId && p.fee_id.toString() === feeId
     );
 
     if (existingPayments.length === 0) {
         const fee = feesList.find(f => f.id.toString() === feeId);
-        return fee ? fee.amount : null;
+        if (!fee) return null;
+
+        // Subtract available credit from fee amount
+        const availableCredit = getStudentCredit(studentId);
+        return Math.max(0, fee.amount - availableCredit);
     }
 
     return existingPayments[0].balance;
@@ -287,6 +311,13 @@ const currentBalanceForEdit = computed(() => {
     const studentId = editForm.student_id;
     const feeId = editForm.fee_id;
 
+    // Check if we have adjusted balance data
+    const adjustedBalance = getAdjustedBalance(studentId, feeId);
+    if (adjustedBalance !== null) {
+        return adjustedBalance;
+    }
+
+    // Fallback to existing logic
     const existingPayments = paymentList.filter(
         p => p.student_id.toString() === studentId &&
             p.fee_id.toString() === feeId &&
@@ -295,7 +326,10 @@ const currentBalanceForEdit = computed(() => {
 
     if (existingPayments.length === 0) {
         const fee = feesList.find(f => f.id.toString() === feeId);
-        return fee ? fee.amount : null;
+        if (!fee) return null;
+
+        const availableCredit = getStudentCredit(studentId);
+        return Math.max(0, fee.amount - availableCredit);
     }
 
     return existingPayments[0].balance;

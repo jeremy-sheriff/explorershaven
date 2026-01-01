@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FeeController;
+use App\Http\Controllers\FeeCreditController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FeePaymentController;
 use App\Http\Controllers\StudentController;
@@ -19,7 +20,7 @@ Route::put('/students/{student}', [StudentController::class, 'update'])->name('s
 Route::delete('/students/{student}', [StudentController::class, 'destroy'])->name('students.destroy');
 Route::get('/fees', [FeeController::class, 'index'])->name('fees.index');
 Route::get('/fee-payments', [FeePaymentController::class, 'index'])->name('fee-payments.index');
-
+Route::get('/fee-credits', [FeeCreditController::class, 'index'])->name('fee-credits.index');
 Route::post('/fee-payments', [FeePaymentController::class, 'store'])->name('fee-payments.store');
 Route::put('/fee-payments/{feePayment}', [FeePaymentController::class, 'update'])->name('fee-payments.update');
 Route::delete('/fee-payments/{feePayment}', [FeePaymentController::class, 'destroy'])->name('fee-payments.destroy');
