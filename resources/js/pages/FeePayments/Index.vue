@@ -641,6 +641,9 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                             <tr v-for="(payment, index) in paymentList" :key="payment.id"
                                 :class="['hover:bg-gray-50 dark:hover:bg-sidebar-accent', { 'bg-muted/50': index % 2 === 0 }]">
                                 <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
+                                    {{index+=1}}
+                                </td>
+                                <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
                                     {{ payment.student?.first_name }} {{ payment.student?.last_name }}
                                 </td>
                                 <td class="whitespace-nowrap px-6 py-4 text-sm">

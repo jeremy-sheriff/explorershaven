@@ -213,7 +213,11 @@ const handleUpdateStudent = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            <TableRow v-for="student in studentsList" :key="student.id">
+                            <TableRow v-for="(student,index) in studentsList" :key="student.id">
+                                <TableCell class="font-medium">
+                                    {{ index+=1 }}
+                                </TableCell>
+
                                 <TableCell class="font-medium">
                                     {{ student.adm_no }}
                                 </TableCell>

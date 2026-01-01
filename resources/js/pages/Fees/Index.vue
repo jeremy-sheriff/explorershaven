@@ -257,7 +257,11 @@ const uniqueGrades = [...new Set(feeList.map(f => f.grade_id))].length;
                             </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-sidebar">
-                            <tr v-for="fee in feeList" :key="fee.id" class="hover:bg-gray-50 dark:hover:bg-sidebar-accent">
+                            <tr v-for="(fee,index) in feeList" :key="fee.id" class="hover:bg-gray-50 dark:hover:bg-sidebar-accent">
+                                <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
+                                    {{ index+=1 }}
+                                </td>
+
                                 <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
                                     {{ fee.grade?.name || 'N/A' }}
                                 </td>
