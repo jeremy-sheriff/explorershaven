@@ -98,7 +98,6 @@ class FeePaymentController extends Controller
             'fee_id' => 'required|exists:fees,id',
             'amount_paid' => 'required|numeric|min:0',
             'payment_date' => 'required|date',
-            'status' => 'required|in:pending,partial,paid',
         ]);
 
         DB::transaction(function () use ($validated) {
@@ -111,24 +110,27 @@ class FeePaymentController extends Controller
                 ->where('fee_id', $validated['fee_id'])
                 ->sum('amount_paid');
 
+            // Check if fee is already fully paid
+            if ($totalPaidBefore >= $fee->amount) {
+                return back()->withErrors([
+                    'fee_id' => 'This fee has already been fully paid. No additional payments can be recorded.'
+                ]);
+            }
+
             $totalPaidNow = $totalPaidBefore + $amountPaid;
             $balance = $fee->amount - $totalPaidNow;
 
-            // Determine status based on balance
-            if ($balance <= 0) {
-                $status = 'paid';
-            } elseif ($totalPaidNow > 0 && $balance > 0) {
-                $status = 'partial';
-            } else {
-                $status = 'pending';
-            }
+            // Auto-calculate status based on balance
+            // If balance is 0 or negative (overpayment), it's paid
+            // If there's still a positive balance, it's partial
+            $status = ($balance <= 0) ? 'paid' : 'partial';
 
-            // Create the payment record
+            // Create the payment record with the correct balance
             $payment = FeePayment::create([
                 'student_id' => $studentId,
                 'fee_id' => $validated['fee_id'],
                 'amount_paid' => $amountPaid,
-                'balance' => $balance < 0 ? 0 : $balance,
+                'balance' => max(0, $balance), // Store 0 if negative (overpayment)
                 'payment_date' => $validated['payment_date'],
                 'status' => $status,
             ]);
@@ -147,11 +149,14 @@ class FeePaymentController extends Controller
                 ]);
             }
 
-            // Update status of all previous payments for this fee
+            // Update status of all previous payments for this fee to match
             FeePayment::where('student_id', $studentId)
                 ->where('fee_id', $validated['fee_id'])
                 ->where('id', '!=', $payment->id)
-                ->update(['status' => $status]);
+                ->update([
+                    'status' => $status,
+                    'balance' => max(0, $balance)
+                ]);
         });
 
         return redirect()->route('fee-payments.index');
@@ -164,7 +169,6 @@ class FeePaymentController extends Controller
             'fee_id' => 'required|exists:fees,id',
             'amount_paid' => 'required|numeric|min:0',
             'payment_date' => 'required|date',
-            'status' => 'required|in:pending,partial,paid',
         ]);
 
         DB::transaction(function () use ($validated, $feePayment) {
@@ -181,21 +185,15 @@ class FeePaymentController extends Controller
             $totalPaidNow = $totalPaidBefore + $amountPaid;
             $balance = $fee->amount - $totalPaidNow;
 
-            // Determine status based on balance
-            if ($balance <= 0) {
-                $status = 'paid';
-            } elseif ($totalPaidNow > 0 && $balance > 0) {
-                $status = 'partial';
-            } else {
-                $status = 'pending';
-            }
+            // Auto-calculate status based on balance
+            $status = ($balance <= 0) ? 'paid' : 'partial';
 
             // Update the payment record
             $feePayment->update([
                 'student_id' => $studentId,
                 'fee_id' => $validated['fee_id'],
                 'amount_paid' => $amountPaid,
-                'balance' => $balance < 0 ? 0 : $balance,
+                'balance' => max(0, $balance),
                 'payment_date' => $validated['payment_date'],
                 'status' => $status,
             ]);
@@ -217,11 +215,14 @@ class FeePaymentController extends Controller
                 ]);
             }
 
-            // Update status of all other payments for this fee
+            // Update status AND balance of all other payments for this fee
             FeePayment::where('student_id', $studentId)
                 ->where('fee_id', $validated['fee_id'])
                 ->where('id', '!=', $feePayment->id)
-                ->update(['status' => $status]);
+                ->update([
+                    'status' => $status,
+                    'balance' => max(0, $balance)
+                ]);
         });
 
         return redirect()->route('fee-payments.index');
@@ -247,17 +248,16 @@ class FeePaymentController extends Controller
 
             $balance = $fee->amount - $totalPaid;
 
-            if ($balance <= 0) {
-                $status = 'paid';
-            } elseif ($totalPaid > 0 && $balance > 0) {
-                $status = 'partial';
-            } else {
-                $status = 'pending';
-            }
+            // Auto-calculate status based on balance
+            $status = ($balance <= 0) ? 'paid' : 'partial';
 
+            // Update both status AND balance for all remaining payments
             FeePayment::where('student_id', $studentId)
                 ->where('fee_id', $feeId)
-                ->update(['status' => $status]);
+                ->update([
+                    'status' => $status,
+                    'balance' => max(0, $balance)
+                ]);
         });
 
         return redirect()->route('fee-payments.index');

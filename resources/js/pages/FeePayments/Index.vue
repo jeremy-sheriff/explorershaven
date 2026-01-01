@@ -85,7 +85,6 @@ const paymentForm = useForm({
     fee_id: '',
     amount_paid: '',
     payment_date: new Date().toISOString().split('T')[0],
-    status: 'pending',
 });
 
 const editForm = useForm({
@@ -93,7 +92,6 @@ const editForm = useForm({
     fee_id: '',
     amount_paid: '',
     payment_date: '',
-    status: '',
 });
 
 const resetForm = () => {
@@ -127,7 +125,6 @@ const handleEdit = (paymentId: number) => {
         editForm.fee_id = payment.fee_id.toString();
         editForm.amount_paid = payment.amount_paid.toString();
         editForm.payment_date = payment.payment_date;
-        editForm.status = payment.status;
 
         openEditPayment.value = true;
     }
@@ -152,7 +149,6 @@ const handleDelete = (paymentId: number) => {
 
 // Filter handlers
 const applyFilters = () => {
-    // Build query params, excluding 'all' values
     const params: Record<string, string> = {};
 
     if (filterForm.grade && filterForm.grade !== 'all') {
@@ -180,7 +176,6 @@ const applyFilters = () => {
         params.sort_balance = filterForm.sort_balance;
     }
 
-    // Use router.get instead of filterForm.get for better reactivity
     router.get('/fee-payments', params, {
         preserveState: false,
         preserveScroll: false,
@@ -188,7 +183,6 @@ const applyFilters = () => {
     });
 };
 
-// Update the clearFilters function:
 const clearFilters = () => {
     filterForm.grade = 'all';
     filterForm.term = 'all';
@@ -199,15 +193,12 @@ const clearFilters = () => {
     filterForm.has_balance = 'all';
     filterForm.sort_balance = 'all';
 
-    // Use router.get to clear filters
     router.get('/fee-payments', {}, {
         preserveState: false,
         preserveScroll: false,
     });
 };
 
-
-// Update the hasActiveFilters computed:
 const hasActiveFilters = computed(() => {
     return !!(
         (filterForm.grade && filterForm.grade !== 'all') ||
@@ -220,7 +211,6 @@ const hasActiveFilters = computed(() => {
         (filterForm.sort_balance && filterForm.sort_balance !== 'all')
     );
 });
-
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-KE', {
@@ -242,22 +232,19 @@ const getStatusColor = (status: string) => {
     const colors = {
         paid: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
         partial: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-        pending: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
     };
-    return colors[status as keyof typeof colors] || colors.pending;
+    return colors[status as keyof typeof colors] || colors.partial;
 };
 
 const totalPaid = paymentList.reduce((sum, p) => sum + parseFloat(p.amount_paid || 0), 0);
 const paidCount = paymentList.filter(p => p.status === 'paid').length;
-const pendingCount = paymentList.filter(p => p.status === 'pending').length;
+const partialCount = paymentList.filter(p => p.status === 'partial').length;
 
-// Get student name helper
 const getStudentName = (studentId: string) => {
     const student = studentsList.find(s => s.id.toString() === studentId);
     return student ? `${student.first_name} ${student.last_name} - ${student.adm_no}` : '';
 };
 
-// Filter fees based on selected student's grade
 const filteredFeesForAdd = computed(() => {
     if (!paymentForm.student_id) return feesList;
 
@@ -276,7 +263,76 @@ const filteredFeesForEdit = computed(() => {
     return feesList.filter(f => f.grade_id === student.grade_id);
 });
 
-// Watch for student changes and reset fee selection
+const currentBalanceForAdd = computed(() => {
+    if (!paymentForm.student_id || !paymentForm.fee_id) return null;
+
+    const studentId = paymentForm.student_id;
+    const feeId = paymentForm.fee_id;
+
+    const existingPayments = paymentList.filter(
+        p => p.student_id.toString() === studentId && p.fee_id.toString() === feeId
+    );
+
+    if (existingPayments.length === 0) {
+        const fee = feesList.find(f => f.id.toString() === feeId);
+        return fee ? fee.amount : null;
+    }
+
+    return existingPayments[0].balance;
+});
+
+const currentBalanceForEdit = computed(() => {
+    if (!editForm.student_id || !editForm.fee_id) return null;
+
+    const studentId = editForm.student_id;
+    const feeId = editForm.fee_id;
+
+    const existingPayments = paymentList.filter(
+        p => p.student_id.toString() === studentId &&
+            p.fee_id.toString() === feeId &&
+            p.id !== selectedEditPaymentId.value
+    );
+
+    if (existingPayments.length === 0) {
+        const fee = feesList.find(f => f.id.toString() === feeId);
+        return fee ? fee.amount : null;
+    }
+
+    return existingPayments[0].balance;
+});
+
+const isFeeFullyPaidForAdd = computed(() => {
+    if (!paymentForm.student_id || !paymentForm.fee_id) return false;
+
+    const studentId = paymentForm.student_id;
+    const feeId = paymentForm.fee_id;
+
+    const existingPayments = paymentList.filter(
+        p => p.student_id.toString() === studentId && p.fee_id.toString() === feeId
+    );
+
+    if (existingPayments.length === 0) return false;
+
+    return existingPayments[0].balance === 0;
+});
+
+const isFeeFullyPaidForEdit = computed(() => {
+    if (!editForm.student_id || !editForm.fee_id) return false;
+
+    const studentId = editForm.student_id;
+    const feeId = editForm.fee_id;
+
+    const existingPayments = paymentList.filter(
+        p => p.student_id.toString() === studentId &&
+            p.fee_id.toString() === feeId &&
+            p.id !== selectedEditPaymentId.value
+    );
+
+    if (existingPayments.length === 0) return false;
+
+    return existingPayments[0].balance === 0;
+});
+
 watch(() => paymentForm.student_id, () => {
     paymentForm.fee_id = '';
 });
@@ -285,23 +341,19 @@ watch(() => editForm.student_id, () => {
     editForm.fee_id = '';
 });
 
-// Get fee details helper
 const getFeeDetails = (feeId: string) => {
     const fee = feesList.find(f => f.id.toString() === feeId);
     return fee ? `${fee.grade?.name} - ${fee.term} (${formatCurrency(fee.amount)})` : '';
 };
 
-// Get available credit for a student
 const getStudentCredit = (studentId: string) => {
     const studentCredits = creditsData[studentId] || [];
     const totalCredit = studentCredits.reduce((sum, credit) => sum + parseFloat(credit.amount || 0), 0);
     return totalCredit;
 };
 
-// Calculate total credits
 const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => sum + parseFloat(credit.amount || 0), 0);
 </script>
-
 <template>
     <Head title="Fee Payments" />
 
@@ -318,8 +370,8 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                     <div class="text-2xl font-bold">{{ formatCurrency(totalPaid) }}</div>
                 </div>
                 <div class="relative overflow-hidden rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border">
-                    <div class="text-sm font-medium text-muted-foreground">Paid / Pending</div>
-                    <div class="text-2xl font-bold">{{ paidCount }} / {{ pendingCount }}</div>
+                    <div class="text-sm font-medium text-muted-foreground">Paid / Partial</div>
+                    <div class="text-2xl font-bold">{{ paidCount }} / {{ partialCount }}</div>
                 </div>
                 <div class="relative overflow-hidden rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border">
                     <div class="text-sm font-medium text-muted-foreground">Available Credits</div>
@@ -413,7 +465,6 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                                         <SelectItem value="all">All Statuses</SelectItem>
                                         <SelectItem value="paid">Paid</SelectItem>
                                         <SelectItem value="partial">Partial</SelectItem>
-                                        <SelectItem value="pending">Pending</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -496,45 +547,46 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                             </Button>
                         </div>
                     </div>
+
                     <!-- Active Filters Display -->
                     <div v-if="hasActiveFilters && !showFilters" class="mb-4 flex flex-wrap gap-2">
                         <span class="text-sm text-muted-foreground">Active filters:</span>
                         <span v-if="filterForm.grade && filterForm.grade !== 'all'" class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs">
-        Grade: {{ gradesList.find(g => g.id.toString() === filterForm.grade)?.name }}
-        <button @click="filterForm.grade = 'all'; applyFilters()" class="hover:text-red-600">
-            <X class="h-3 w-3" />
-        </button>
-    </span>
+                            Grade: {{ gradesList.find(g => g.id.toString() === filterForm.grade)?.name }}
+                            <button @click="filterForm.grade = 'all'; applyFilters()" class="hover:text-red-600">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </span>
                         <span v-if="filterForm.term && filterForm.term !== 'all'" class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs">
-        Term: {{ filterForm.term }}
-        <button @click="filterForm.term = 'all'; applyFilters()" class="hover:text-red-600">
-            <X class="h-3 w-3" />
-        </button>
-    </span>
+                            Term: {{ filterForm.term }}
+                            <button @click="filterForm.term = 'all'; applyFilters()" class="hover:text-red-600">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </span>
                         <span v-if="filterForm.status && filterForm.status !== 'all'" class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs">
-        Status: {{ filterForm.status }}
-        <button @click="filterForm.status = 'all'; applyFilters()" class="hover:text-red-600">
-            <X class="h-3 w-3" />
-        </button>
-    </span>
+                            Status: {{ filterForm.status }}
+                            <button @click="filterForm.status = 'all'; applyFilters()" class="hover:text-red-600">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </span>
                         <span v-if="filterForm.student && filterForm.student !== 'all'" class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs">
-        Student: {{ studentsList.find(s => s.id.toString() === filterForm.student)?.first_name }}
-        <button @click="filterForm.student = 'all'; applyFilters()" class="hover:text-red-600">
-            <X class="h-3 w-3" />
-        </button>
-    </span>
+                            Student: {{ studentsList.find(s => s.id.toString() === filterForm.student)?.first_name }}
+                            <button @click="filterForm.student = 'all'; applyFilters()" class="hover:text-red-600">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </span>
                         <span v-if="filterForm.date_from" class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs">
-        From: {{ filterForm.date_from }}
-        <button @click="filterForm.date_from = ''; applyFilters()" class="hover:text-red-600">
-            <X class="h-3 w-3" />
-        </button>
-    </span>
+                            From: {{ filterForm.date_from }}
+                            <button @click="filterForm.date_from = ''; applyFilters()" class="hover:text-red-600">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </span>
                         <span v-if="filterForm.date_to" class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs">
-        To: {{ filterForm.date_to }}
-        <button @click="filterForm.date_to = ''; applyFilters()" class="hover:text-red-600">
-            <X class="h-3 w-3" />
-        </button>
-    </span>
+                            To: {{ filterForm.date_to }}
+                            <button @click="filterForm.date_to = ''; applyFilters()" class="hover:text-red-600">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </span>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -618,7 +670,7 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                 <DialogHeader>
                     <DialogTitle>Record New Payment</DialogTitle>
                     <DialogDescription>
-                        Enter the payment details below to record a new fee payment.
+                        Enter the payment details below. Status will be automatically calculated.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -667,6 +719,35 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                         <span v-if="paymentForm.errors.fee_id" class="text-sm text-red-600">{{ paymentForm.errors.fee_id }}</span>
                     </div>
 
+                    <!-- Current Balance Info -->
+                    <div v-if="currentBalanceForAdd !== null && paymentForm.fee_id"
+                         :class="[
+                             'rounded-lg p-3',
+                             isFeeFullyPaidForAdd
+                                 ? 'bg-red-50 dark:bg-red-900/20'
+                                 : 'bg-orange-50 dark:bg-orange-900/20'
+                         ]">
+                        <p :class="[
+                            'text-sm font-medium',
+                            isFeeFullyPaidForAdd
+                                ? 'text-red-800 dark:text-red-200'
+                                : 'text-orange-800 dark:text-orange-200'
+                        ]">
+                            {{ isFeeFullyPaidForAdd ? '🚫' : '📊' }} Current Balance: {{ formatCurrency(currentBalanceForAdd) }}
+                        </p>
+                        <p :class="[
+                            'text-xs',
+                            isFeeFullyPaidForAdd
+                                ? 'text-red-600 dark:text-red-400'
+                                : 'text-orange-600 dark:text-orange-400'
+                        ]">
+                            {{ isFeeFullyPaidForAdd
+                            ? '⚠️ This fee has been fully paid. Additional payments are not allowed.'
+                            : (currentBalanceForAdd > 0 ? 'Amount remaining to be paid for this fee' : 'This fee has been fully paid')
+                            }}
+                        </p>
+                    </div>
+
                     <!-- Amount and Date -->
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div class="grid gap-2">
@@ -677,6 +758,7 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                                 type="number"
                                 step="0.01"
                                 placeholder="15000.00"
+                                :disabled="isFeeFullyPaidForAdd"
                             />
                             <span v-if="paymentForm.errors.amount_paid" class="text-sm text-red-600">{{ paymentForm.errors.amount_paid }}</span>
                         </div>
@@ -686,25 +768,17 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                                 id="payment_date"
                                 v-model="paymentForm.payment_date"
                                 type="date"
+                                :disabled="isFeeFullyPaidForAdd"
                             />
                             <span v-if="paymentForm.errors.payment_date" class="text-sm text-red-600">{{ paymentForm.errors.payment_date }}</span>
                         </div>
                     </div>
 
-                    <!-- Status -->
-                    <div class="grid gap-2">
-                        <Label for="status">Status</Label>
-                        <Select v-model="paymentForm.status">
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="partial">Partial</SelectItem>
-                                <SelectItem value="paid">Paid</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <span v-if="paymentForm.errors.status" class="text-sm text-red-600">{{ paymentForm.errors.status }}</span>
+                    <!-- Status Info -->
+                    <div class="rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
+                        <p class="text-xs text-blue-800 dark:text-blue-200">
+                            ℹ️ Payment status will be automatically calculated based on the balance
+                        </p>
                     </div>
                 </div>
 
@@ -714,7 +788,10 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                             Cancel
                         </Button>
                     </DialogClose>
-                    <Button @click="handleSubmitPayment" :disabled="paymentForm.processing">
+                    <Button
+                        @click="handleSubmitPayment"
+                        :disabled="paymentForm.processing || isFeeFullyPaidForAdd"
+                    >
                         {{ paymentForm.processing ? 'Recording...' : 'Record Payment' }}
                     </Button>
                 </DialogFooter>
@@ -731,7 +808,7 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                 <DialogHeader>
                     <DialogTitle>Edit Payment</DialogTitle>
                     <DialogDescription>
-                        Update the payment details below.
+                        Update the payment details. Status will be automatically recalculated.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -777,6 +854,35 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                         <span v-if="editForm.errors.fee_id" class="text-sm text-red-600">{{ editForm.errors.fee_id }}</span>
                     </div>
 
+                    <!-- Current Balance Info -->
+                    <div v-if="currentBalanceForEdit !== null && editForm.fee_id"
+                         :class="[
+                             'rounded-lg p-3',
+                             isFeeFullyPaidForEdit
+                                 ? 'bg-red-50 dark:bg-red-900/20'
+                                 : 'bg-orange-50 dark:bg-orange-900/20'
+                         ]">
+                        <p :class="[
+                            'text-sm font-medium',
+                            isFeeFullyPaidForEdit
+                                ? 'text-red-800 dark:text-red-200'
+                                : 'text-orange-800 dark:text-orange-200'
+                        ]">
+                            {{ isFeeFullyPaidForEdit ? '🚫' : '📊' }} Current Balance: {{ formatCurrency(currentBalanceForEdit) }}
+                        </p>
+                        <p :class="[
+                            'text-xs',
+                            isFeeFullyPaidForEdit
+                                ? 'text-red-600 dark:text-red-400'
+                                : 'text-orange-600 dark:text-orange-400'
+                        ]">
+                            {{ isFeeFullyPaidForEdit
+                            ? '⚠️ This fee has been fully paid. Cannot add more payments.'
+                            : 'Amount remaining after other payments'
+                            }}
+                        </p>
+                    </div>
+
                     <!-- Amount and Date -->
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div class="grid gap-2">
@@ -787,6 +893,7 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                                 type="number"
                                 step="0.01"
                                 placeholder="15000.00"
+                                :disabled="isFeeFullyPaidForEdit"
                             />
                             <span v-if="editForm.errors.amount_paid" class="text-sm text-red-600">{{ editForm.errors.amount_paid }}</span>
                         </div>
@@ -796,25 +903,17 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                                 id="edit_payment_date"
                                 v-model="editForm.payment_date"
                                 type="date"
+                                :disabled="isFeeFullyPaidForEdit"
                             />
                             <span v-if="editForm.errors.payment_date" class="text-sm text-red-600">{{ editForm.errors.payment_date }}</span>
                         </div>
                     </div>
 
-                    <!-- Status -->
-                    <div class="grid gap-2">
-                        <Label for="edit_status">Status</Label>
-                        <Select v-model="editForm.status">
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="partial">Partial</SelectItem>
-                                <SelectItem value="paid">Paid</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <span v-if="editForm.errors.status" class="text-sm text-red-600">{{ editForm.errors.status }}</span>
+                    <!-- Status Info -->
+                    <div class="rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
+                        <p class="text-xs text-blue-800 dark:text-blue-200">
+                            ℹ️ Payment status will be automatically recalculated based on the balance
+                        </p>
                     </div>
                 </div>
 
@@ -824,7 +923,10 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                             Cancel
                         </Button>
                     </DialogClose>
-                    <Button @click="handleUpdatePayment" :disabled="editForm.processing">
+                    <Button
+                        @click="handleUpdatePayment"
+                        :disabled="editForm.processing || isFeeFullyPaidForEdit"
+                    >
                         {{ editForm.processing ? 'Updating...' : 'Update Payment' }}
                     </Button>
                 </DialogFooter>
