@@ -105,6 +105,22 @@ class FeePaymentController extends Controller
             $studentId = $validated['student_id'];
             $amountPaid = $validated['amount_paid'];
 
+            // Determine current term
+            $currentMonth = now()->month;
+            $currentTerm = match(true) {
+                $currentMonth >= 1 && $currentMonth <= 4 => 'Term 1 2025',
+                $currentMonth >= 5 && $currentMonth <= 8 => 'Term 2 2025',
+                $currentMonth >= 9 && $currentMonth <= 12 => 'Term 3 2025',
+                default => 'Term 1 2025'
+            };
+
+            // Validate that the fee is for the current term
+            if ($fee->term !== $currentTerm) {
+                return back()->withErrors([
+                    'fee_id' => "Payments can only be made for the current term ({$currentTerm}). This fee is for {$fee->term}."
+                ]);
+            }
+
             // Calculate total paid for this fee by this student
             $totalPaidBefore = FeePayment::where('student_id', $studentId)
                 ->where('fee_id', $validated['fee_id'])
@@ -121,8 +137,6 @@ class FeePaymentController extends Controller
             $balance = $fee->amount - $totalPaidNow;
 
             // Auto-calculate status based on balance
-            // If balance is 0 or negative (overpayment), it's paid
-            // If there's still a positive balance, it's partial
             $status = ($balance <= 0) ? 'paid' : 'partial';
 
             // Create the payment record with the correct balance
@@ -130,7 +144,7 @@ class FeePaymentController extends Controller
                 'student_id' => $studentId,
                 'fee_id' => $validated['fee_id'],
                 'amount_paid' => $amountPaid,
-                'balance' => max(0, $balance), // Store 0 if negative (overpayment)
+                'balance' => max(0, $balance),
                 'payment_date' => $validated['payment_date'],
                 'status' => $status,
             ]);
@@ -175,6 +189,22 @@ class FeePaymentController extends Controller
             $fee = Fee::findOrFail($validated['fee_id']);
             $studentId = $validated['student_id'];
             $amountPaid = $validated['amount_paid'];
+
+            // Determine current term
+            $currentMonth = now()->month;
+            $currentTerm = match(true) {
+                $currentMonth >= 1 && $currentMonth <= 4 => 'Term 1 2025',
+                $currentMonth >= 5 && $currentMonth <= 8 => 'Term 2 2025',
+                $currentMonth >= 9 && $currentMonth <= 12 => 'Term 3 2025',
+                default => 'Term 1 2025'
+            };
+
+            // Validate that the fee is for the current term
+            if ($fee->term !== $currentTerm) {
+                return back()->withErrors([
+                    'fee_id' => "Payments can only be made for the current term ({$currentTerm}). This fee is for {$fee->term}."
+                ]);
+            }
 
             // Calculate total paid for this fee by this student (excluding current payment)
             $totalPaidBefore = FeePayment::where('student_id', $studentId)

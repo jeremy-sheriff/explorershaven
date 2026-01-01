@@ -2,13 +2,40 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
+import { Head, router, useForm } from '@inertiajs/vue3';
+import { Button } from '@/components/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { computed, ref } from 'vue';
+import { Filter, X } from 'lucide-vue-next';
 
 const props = defineProps<{
     fees?: any[];
+    grades?: any[];
+    terms?: string[];
+    filters?: {
+        grade?: string;
+        term?: string;
+    };
 }>();
 
 const feeList = props.fees || [];
+const gradesList = props.grades || [];
+const termsList = props.terms || [];
+
+const showFilters = ref(false);
+
+// Filter form
+const filterForm = useForm({
+    grade: props.filters?.grade || 'all',
+    term: props.filters?.term || 'all',
+});
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -54,6 +81,41 @@ const formatDate = (date: string) => {
     });
 };
 
+// Filter handlers
+const applyFilters = () => {
+    const params: Record<string, string> = {};
+
+    if (filterForm.grade && filterForm.grade !== 'all') {
+        params.grade = filterForm.grade;
+    }
+    if (filterForm.term && filterForm.term !== 'all') {
+        params.term = filterForm.term;
+    }
+
+    router.get('/fees', params, {
+        preserveState: false,
+        preserveScroll: false,
+        only: ['fees', 'filters'],
+    });
+};
+
+const clearFilters = () => {
+    filterForm.grade = 'all';
+    filterForm.term = 'all';
+
+    router.get('/fees', {}, {
+        preserveState: false,
+        preserveScroll: false,
+    });
+};
+
+const hasActiveFilters = computed(() => {
+    return !!(
+        (filterForm.grade && filterForm.grade !== 'all') ||
+        (filterForm.term && filterForm.term !== 'all')
+    );
+});
+
 const totalFees = feeList.reduce((sum, fee) => sum + parseFloat(fee.amount || 0), 0);
 const uniqueTerms = [...new Set(feeList.map(f => f.term))].length;
 const uniqueGrades = [...new Set(feeList.map(f => f.grade_id))].length;
@@ -85,12 +147,102 @@ const uniqueGrades = [...new Set(feeList.map(f => f.grade_id))].length;
                 <div class="p-6">
                     <div class="mb-4 flex items-center justify-between">
                         <h2 class="text-xl font-semibold">Fee Structure</h2>
-                        <button
-                            @click="handleCreate"
-                            class="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
-                        >
-                            + Add Fee
-                        </button>
+                        <div class="flex gap-2">
+                            <Button
+                                variant="outline"
+                                @click="showFilters = !showFilters"
+                                class="gap-2"
+                            >
+                                <Filter class="h-4 w-4" />
+                                Filters
+                                <span v-if="hasActiveFilters" class="ml-1 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
+                                    Active
+                                </span>
+                            </Button>
+                            <button
+                                @click="handleCreate"
+                                class="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
+                            >
+                                + Add Fee
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filter Panel -->
+                    <div v-if="showFilters" class="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-sidebar-accent">
+                        <div class="mb-4 flex items-center justify-between">
+                            <h3 class="font-semibold">Filter Fees</h3>
+                            <Button
+                                v-if="hasActiveFilters"
+                                variant="ghost"
+                                size="sm"
+                                @click="clearFilters"
+                                class="gap-2 text-red-600 hover:text-red-700"
+                            >
+                                <X class="h-4 w-4" />
+                                Clear All
+                            </Button>
+                        </div>
+
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <!-- Grade Filter -->
+                            <div class="grid gap-2">
+                                <Label>Grade</Label>
+                                <Select v-model="filterForm.grade">
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="All Grades" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Grades</SelectItem>
+                                        <SelectItem v-for="grade in gradesList" :key="grade.id" :value="grade.id.toString()">
+                                            {{ grade.name }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <!-- Term Filter -->
+                            <div class="grid gap-2">
+                                <Label>Term</Label>
+                                <Select v-model="filterForm.term">
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="All Terms" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Terms</SelectItem>
+                                        <SelectItem v-for="term in termsList" :key="term" :value="term">
+                                            {{ term }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex justify-end gap-2">
+                            <Button variant="outline" @click="showFilters = false">
+                                Close
+                            </Button>
+                            <Button @click="applyFilters" :disabled="filterForm.processing">
+                                Apply Filters
+                            </Button>
+                        </div>
+                    </div>
+
+                    <!-- Active Filters Display -->
+                    <div v-if="hasActiveFilters && !showFilters" class="mb-4 flex flex-wrap gap-2">
+                        <span class="text-sm text-muted-foreground">Active filters:</span>
+                        <span v-if="filterForm.grade && filterForm.grade !== 'all'" class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs">
+                            Grade: {{ gradesList.find(g => g.id.toString() === filterForm.grade)?.name }}
+                            <button @click="filterForm.grade = 'all'; applyFilters()" class="hover:text-red-600">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </span>
+                        <span v-if="filterForm.term && filterForm.term !== 'all'" class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs">
+                            Term: {{ filterForm.term }}
+                            <button @click="filterForm.term = 'all'; applyFilters()" class="hover:text-red-600">
+                                <X class="h-3 w-3" />
+                            </button>
+                        </span>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -143,6 +295,14 @@ const uniqueGrades = [...new Set(feeList.map(f => f.grade_id))].length;
                             </tr>
                             </tbody>
                         </table>
+
+                        <!-- Empty State -->
+                        <div v-if="feeList.length === 0" class="py-12 text-center">
+                            <p class="text-muted-foreground">No fees found matching your filters.</p>
+                            <Button v-if="hasActiveFilters" variant="outline" class="mt-4" @click="clearFilters">
+                                Clear Filters
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </div>
