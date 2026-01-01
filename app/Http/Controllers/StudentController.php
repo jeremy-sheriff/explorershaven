@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Fee;
 use App\Models\Student;
 use App\Models\Grade;
 use App\Models\Guardian;
@@ -54,6 +55,65 @@ class StudentController extends Controller
         ]);
 
         return redirect()->route('students.index'); // Changed this line
+    }
+
+
+    public function show(Student $student)
+    {
+        $student->load([
+            'guardian',
+            'grade',
+            'feePayments.fee',
+            'feeCredits.fromPayment',
+            'feeCredits.appliedToFee'
+        ]);
+
+        // Calculate total paid
+        $totalPaid = $student->feePayments->sum('amount_paid');
+
+        // Calculate total balance
+        $totalBalance = $student->feePayments->sum('balance');
+
+        // Get available credits
+        $availableCredits = $student->feeCredits()->where('status', 'available')->sum('amount');
+
+        // Get applied credits
+        $appliedCredits = $student->feeCredits()->where('status', 'applied')->sum('amount');
+
+        // Get current term fees
+        $currentMonth = now()->month;
+        $currentYear = 2025; // Adjust as needed
+        $currentTerm = match(true) {
+            $currentMonth >= 1 && $currentMonth <= 4 => "Term 1 {$currentYear}",
+            $currentMonth >= 5 && $currentMonth <= 8 => "Term 2 {$currentYear}",
+            $currentMonth >= 9 && $currentMonth <= 12 => "Term 3 {$currentYear}",
+            default => "Term 1 {$currentYear}"
+        };
+
+        $currentTermFee = Fee::query()->where('grade_id', $student->grade_id)
+            ->where('term', $currentTerm)
+            ->first();
+
+        $currentTermBalance = 0;
+        if ($currentTermFee) {
+            $paidForCurrentTerm = $student->feePayments()
+                ->where('fee_id', $currentTermFee->id)
+                ->sum('amount_paid');
+            $currentTermBalance = max(0, $currentTermFee->amount - $paidForCurrentTerm - $availableCredits);
+        }
+
+        return response()->json([
+            'student' => $student,
+            'summary' => [
+                'total_paid' => $totalPaid,
+                'total_balance' => $totalBalance,
+                'available_credits' => $availableCredits,
+                'applied_credits' => $appliedCredits,
+                'current_term_balance' => $currentTermBalance,
+            ],
+            'payments' => $student->feePayments()->with('fee')->latest()->get(),
+            'credits' => $student->feeCredits()->with(['fromPayment', 'appliedToFee'])->latest()->get(),
+        ]);
     }
 
 

@@ -21,7 +21,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-
 import { useMediaQuery } from '@vueuse/core'
 import {
     Dialog,
@@ -45,7 +44,8 @@ import {
 } from '@/components/ui/drawer'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {computed, ref} from "vue";
+import { computed, ref } from "vue";
+import axios from 'axios';
 
 const isDesktop = useMediaQuery('(min-width: 640px)')
 
@@ -62,7 +62,11 @@ const Modal = computed(() => ({
 
 const openAddStudent = ref(false)
 const openEditStudent = ref(false)
+const openViewStudent = ref(false)
 const selectedEditStudentId = ref<number | null>(null)
+const selectedViewStudentId = ref<number | null>(null)
+const studentDetails = ref<any>(null)
+const loadingDetails = ref(false)
 
 const props = defineProps<{
     students?: any[];
@@ -130,8 +134,21 @@ const handleEdit = (studentId: number) => {
     }
 };
 
-const handleView = (studentId: number) => {
-    alert('View student: ' + studentId);
+const handleView = async (studentId: number) => {
+    selectedViewStudentId.value = studentId
+    loadingDetails.value = true
+    openViewStudent.value = true
+
+    try {
+        const response = await axios.get(`/students/${studentId}`)
+        studentDetails.value = response.data
+    } catch (error) {
+        console.error('Error fetching student details:', error)
+        alert('Failed to load student details')
+        openViewStudent.value = false
+    } finally {
+        loadingDetails.value = false
+    }
 };
 
 const handleDelete = (studentId: number) => {
@@ -164,7 +181,23 @@ const handleUpdateStudent = () => {
         })
     }
 }
+
+const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-KE', {
+        style: 'currency',
+        currency: 'KES'
+    }).format(amount)
+}
+
+const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString('en-KE', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    })
+}
 </script>
+
 
 <template>
     <Head title="Students" />
@@ -204,6 +237,7 @@ const handleUpdateStudent = () => {
                         <TableCaption>A list of all students in the system.</TableCaption>
                         <TableHeader>
                             <TableRow>
+                                <TableHead>#</TableHead>
                                 <TableHead>Adm No</TableHead>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Grade</TableHead>
@@ -213,11 +247,10 @@ const handleUpdateStudent = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            <TableRow v-for="(student,index) in studentsList" :key="student.id">
+                            <TableRow v-for="(student, index) in studentsList" :key="student.id">
                                 <TableCell class="font-medium">
-                                    {{ index+=1 }}
+                                    {{ index + 1 }}
                                 </TableCell>
-
                                 <TableCell class="font-medium">
                                     {{ student.adm_no }}
                                 </TableCell>
@@ -235,18 +268,27 @@ const handleUpdateStudent = () => {
                                 </TableCell>
                                 <TableCell class="text-right">
                                     <div class="flex items-center justify-end gap-2">
-                                        <button
+                                        <Button
+                                            variant="default"
+                                            size="sm"
                                             @click="handleView(student.id)"
-                                            class="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
                                         >
                                             View
-                                        </button>
+                                        </Button>
 
-                                        <Button @click="handleEdit(student.id)">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            @click="handleEdit(student.id)"
+                                        >
                                             Edit
                                         </Button>
 
-                                        <Button variant="destructive" @click="handleDelete(student.id)">
+                                        <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            @click="handleDelete(student.id)"
+                                        >
                                             Delete
                                         </Button>
                                     </div>
@@ -540,6 +582,180 @@ const handleUpdateStudent = () => {
                     <Button @click="handleUpdateStudent" :disabled="editForm.processing">
                         {{ editForm.processing ? 'Updating...' : 'Update Student' }}
                     </Button>
+                </component>
+            </component>
+        </component>
+
+        <!-- View Student Details Modal -->
+        <component :is="Modal.Root" v-model:open="openViewStudent" :modal="true">
+            <component
+                :is="Modal.Content"
+                class="sm:max-w-4xl max-h-[90vh] overflow-y-auto"
+                :class="[{ 'px-2 pb-8 *:px-4': !isDesktop }]"
+            >
+                <component :is="Modal.Header">
+                    <component :is="Modal.Title">
+                        Student Details
+                    </component>
+                    <component :is="Modal.Description">
+                        Complete financial and personal information
+                    </component>
+                </component>
+
+                <div v-if="loadingDetails" class="py-12 text-center">
+                    <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
+                    <p class="mt-4 text-sm text-muted-foreground">Loading student details...</p>
+                </div>
+
+                <div v-else-if="studentDetails" class="space-y-6 py-4">
+                    <!-- Student Information -->
+                    <div class="rounded-lg border p-4">
+                        <h3 class="mb-3 font-semibold">Student Information</h3>
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <div>
+                                <p class="text-sm text-muted-foreground">Admission Number</p>
+                                <p class="font-medium">{{ studentDetails.student.adm_no }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-muted-foreground">Full Name</p>
+                                <p class="font-medium">
+                                    {{ studentDetails.student.first_name }}
+                                    {{ studentDetails.student.middle_name }}
+                                    {{ studentDetails.student.last_name }}
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-muted-foreground">Grade</p>
+                                <p class="font-medium">{{ studentDetails.student.grade?.name || 'N/A' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-muted-foreground">Guardian</p>
+                                <p class="font-medium">
+                                    {{ studentDetails.student.guardian?.first_name }}
+                                    {{ studentDetails.student.guardian?.last_name }}
+                                </p>
+                                <p class="text-sm text-muted-foreground">
+                                    {{ studentDetails.student.guardian?.phone_number }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Financial Summary -->
+                    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div class="rounded-lg border bg-blue-50 p-4 dark:bg-blue-950">
+                            <p class="text-sm font-medium text-blue-600 dark:text-blue-400">Total Paid</p>
+                            <p class="text-2xl font-bold">{{ formatCurrency(studentDetails.summary.total_paid) }}</p>
+                        </div>
+                        <div class="rounded-lg border bg-red-50 p-4 dark:bg-red-950">
+                            <p class="text-sm font-medium text-red-600 dark:text-red-400">Total Balance</p>
+                            <p class="text-2xl font-bold">{{ formatCurrency(studentDetails.summary.total_balance) }}</p>
+                        </div>
+                        <div class="rounded-lg border bg-green-50 p-4 dark:bg-green-950">
+                            <p class="text-sm font-medium text-green-600 dark:text-green-400">Available Credits</p>
+                            <p class="text-2xl font-bold">{{ formatCurrency(studentDetails.summary.available_credits) }}</p>
+                        </div>
+                        <div class="rounded-lg border bg-purple-50 p-4 dark:bg-purple-950">
+                            <p class="text-sm font-medium text-purple-600 dark:text-purple-400">Current Term Balance</p>
+                            <p class="text-2xl font-bold">{{ formatCurrency(studentDetails.summary.current_term_balance) }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Payment History -->
+                    <div class="rounded-lg border">
+                        <div class="border-b p-4">
+                            <h3 class="font-semibold">Payment History</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Fee Term</TableHead>
+                                        <TableHead>Amount Paid</TableHead>
+                                        <TableHead>Balance</TableHead>
+                                        <TableHead>Payment Method</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    <TableRow v-if="studentDetails.payments.length === 0">
+                                        <TableCell colspan="5" class="text-center text-muted-foreground">
+                                            No payments recorded
+                                        </TableCell>
+                                    </TableRow>
+                                    <TableRow v-for="payment in studentDetails.payments" :key="payment.id">
+                                        <TableCell>{{ formatDate(payment.created_at) }}</TableCell>
+                                        <TableCell>{{ payment.fee?.term || 'N/A' }}</TableCell>
+                                        <TableCell class="font-medium text-green-600">
+                                            {{ formatCurrency(payment.amount_paid) }}
+                                        </TableCell>
+                                        <TableCell class="font-medium text-red-600">
+                                            {{ formatCurrency(payment.balance) }}
+                                        </TableCell>
+                                        <TableCell>{{ payment.payment_method || 'N/A' }}</TableCell>
+                                    </TableRow>
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </div>
+
+                    <!-- Fee Credits -->
+                    <div class="rounded-lg border">
+                        <div class="border-b p-4">
+                            <h3 class="font-semibold">Fee Credits</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Amount</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Source</TableHead>
+                                        <TableHead>Applied To</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    <TableRow v-if="studentDetails.credits.length === 0">
+                                        <TableCell colspan="5" class="text-center text-muted-foreground">
+                                            No credits available
+                                        </TableCell>
+                                    </TableRow>
+                                    <TableRow v-for="credit in studentDetails.credits" :key="credit.id">
+                                        <TableCell>{{ formatDate(credit.created_at) }}</TableCell>
+                                        <TableCell class="font-medium">
+                                            {{ formatCurrency(credit.amount) }}
+                                        </TableCell>
+                                        <TableCell>
+                                            <span
+                                                class="inline-flex rounded-full px-2 py-1 text-xs font-semibold"
+                                                :class="{
+                                                    'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200': credit.status === 'available',
+                                                    'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200': credit.status === 'applied'
+                                                }"
+                                            >
+                                                {{ credit.status }}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell>
+                                            {{ credit.from_payment ? `Payment #${credit.from_payment.id}` : 'N/A' }}
+                                        </TableCell>
+                                        <TableCell>
+                                            {{ credit.applied_to_fee ? credit.applied_to_fee.term : 'Not Applied' }}
+                                        </TableCell>
+                                    </TableRow>
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </div>
+                </div>
+
+                <component :is="Modal.Footer" class="pt-4">
+                    <component :is="Modal.Close" as-child>
+                        <Button variant="outline">
+                            Close
+                        </Button>
+                    </component>
                 </component>
             </component>
         </component>

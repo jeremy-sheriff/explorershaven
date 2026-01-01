@@ -17,5 +17,15 @@ class Student extends Model
     {
         return $this->belongsTo(Grade::class);
     }
+
+    public function feePayments()
+    {
+        return $this->hasMany(FeePayment::class);
+    }
+
+    public function feeCredits()
+    {
+        return $this->hasMany(FeeCredit::class);
+    }
 }
 

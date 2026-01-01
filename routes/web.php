@@ -17,6 +17,7 @@ Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard
 Route::get('/students', [StudentController::class, 'index'])->name('students.index');
 Route::post('/students', [StudentController::class, 'store'])->name('students.store');
 Route::put('/students/{student}', [StudentController::class, 'update'])->name('students.update');
+Route::get('/students/{student}', [StudentController::class, 'show'])->name('students.show');
 Route::delete('/students/{student}', [StudentController::class, 'destroy'])->name('students.destroy');
 Route::get('/fees', [FeeController::class, 'index'])->name('fees.index');
 Route::get('/fee-payments', [FeePaymentController::class, 'index'])->name('fee-payments.index');
