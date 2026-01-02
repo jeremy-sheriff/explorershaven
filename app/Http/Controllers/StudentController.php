@@ -6,6 +6,7 @@ use App\Models\Fee;
 use App\Models\Student;
 use App\Models\Grade;
 use App\Models\Guardian;
+use App\Models\SystemSetting;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 
@@ -80,9 +81,10 @@ class StudentController extends Controller
         // Get applied credits
         $appliedCredits = $student->feeCredits()->where('status', 'applied')->sum('amount');
 
+        $academicYear = SystemSetting::currentAcademicYear();
         // Get current term fees
         $currentMonth = now()->month;
-        $currentYear = 2025; // Adjust as needed
+        $currentYear = 2026; // Adjust as needed
         $currentTerm = match(true) {
             $currentMonth >= 1 && $currentMonth <= 4 => "Term 1 {$currentYear}",
             $currentMonth >= 5 && $currentMonth <= 8 => "Term 2 {$currentYear}",
