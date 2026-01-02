@@ -20,9 +20,14 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);*/
+
+        User::query()->create([
+            'name'=>'James Monachi',
+            'password'=>bcrypt('5xM0I73Em5gN'),
+            'email'=>'jamesmonachi@gmail.com'
+            ]);
 //        Grade::query()->truncatdre();
         $this->call([
-
             GradeSeeder::class,
             GuardianSeeder::class,
             StudentSeeder::class,

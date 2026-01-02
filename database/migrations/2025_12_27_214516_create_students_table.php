@@ -13,12 +13,16 @@ return new class extends Migration
     {
         Schema::create('students', function (Blueprint $table) {
             $table->id();
-            $table->string('adm_no')->unique(); // Define column first, then make it unique
+            $table->string('adm_no')->unique();
             $table->string('first_name');
-            $table->string('middle_name')->nullable(); // Consider making optional
+            $table->string('middle_name')->nullable();
             $table->string('last_name');
             $table->foreignId('guardian_id')->constrained()->cascadeOnDelete();
             $table->foreignId('grade_id')->constrained()->cascadeOnDelete();
+            $table->string('academic_year')->default('2025');
+            $table->enum('status', ['active', 'graduated', 'transferred', 'withdrawn'])->default('active');
+            $table->date('enrollment_date')->nullable();
+            $table->date('graduation_date')->nullable();
             $table->timestamps();
         });
     }

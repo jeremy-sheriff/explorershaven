@@ -21,6 +21,7 @@ import fees from "@/routes/fees";
 import { dashboard } from '@/routes';
 import feePayments from "@/routes/fee-payments";
 import feeCredits from "@/routes/fee-credits";
+import studentProgression from "@/routes/student-progression";
 
 const mainNavItems: NavItem[] = [
     {
@@ -31,6 +32,12 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Students',
         href: students.index(),
+        icon: UsersIcon,
+    },
+
+    {
+        title: 'Progression',
+        href: studentProgression.index(),
         icon: UsersIcon,
     },
     {
