@@ -14,7 +14,7 @@ import {
 
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import {BookOpen, Folder, LayoutGrid, UsersIcon, DollarSign, Receipt} from 'lucide-vue-next';
+import {BookOpen, Folder, LayoutGrid, UsersIcon, DollarSign, Receipt, CogIcon} from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import students from "@/routes/students";
 import fees from "@/routes/fees";
@@ -32,12 +32,6 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Students',
         href: students.index(),
-        icon: UsersIcon,
-    },
-
-    {
-        title: 'Progression',
-        href: studentProgression.index(),
         icon: UsersIcon,
     },
     {
@@ -60,9 +54,9 @@ const mainNavItems: NavItem[] = [
 
 const footerNavItems: NavItem[] = [
     {
-        title: 'App',
-        href: '#',
-        icon: BookOpen,
+        title: 'Progression',
+        href: studentProgression.index(),
+        icon: CogIcon,
     },
 ];
 </script>
