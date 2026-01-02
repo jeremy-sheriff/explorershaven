@@ -39,4 +39,42 @@ class FeeController extends Controller
             'filters' => $request->only(['grade', 'term']),
         ]);
     }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'grade_id' => 'required|exists:grades,id',
+            'amount' => 'required|numeric|min:0',
+            'term' => 'required|string|max:255',
+            'due_date' => 'required|date',
+        ]);
+
+        Fee::create($validated);
+
+        return redirect()->route('fees.index')
+            ->with('success', 'Fee created successfully.');
+    }
+
+    public function update(Request $request, Fee $fee)
+    {
+        $validated = $request->validate([
+            'grade_id' => 'required|exists:grades,id',
+            'amount' => 'required|numeric|min:0',
+            'term' => 'required|string|max:255',
+            'due_date' => 'required|date',
+        ]);
+
+        $fee->update($validated);
+
+        return redirect()->route('fees.index')
+            ->with('success', 'Fee updated successfully.');
+    }
+
+    public function destroy(Fee $fee)
+    {
+        $fee->delete();
+
+        return redirect()->route('fees.index')
+            ->with('success', 'Fee deleted successfully.');
+    }
 }

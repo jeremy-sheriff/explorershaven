@@ -5,12 +5,22 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { computed, ref } from 'vue';
 import { Filter, X } from 'lucide-vue-next';
@@ -30,6 +40,9 @@ const gradesList = props.grades || [];
 const termsList = props.terms || [];
 
 const showFilters = ref(false);
+const openAddFee = ref(false);
+const openEditFee = ref(false);
+const selectedEditFeeId = ref<number | null>(null);
 
 // Filter form
 const filterForm = useForm({
@@ -48,22 +61,72 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-const handleEdit = (feeId: number) => {
-    alert('Edit fee: ' + feeId);
+// Add fee form
+const feeForm = useForm({
+    grade_id: '',
+    amount: '',
+    term: '',
+    due_date: '',
+});
+
+// Edit fee form
+const editForm = useForm({
+    grade_id: '',
+    amount: '',
+    term: '',
+    due_date: '',
+});
+
+const resetForm = () => {
+    feeForm.reset();
 };
 
-const handleView = (feeId: number) => {
-    alert('View fee: ' + feeId);
+const resetEditForm = () => {
+    editForm.reset();
+};
+
+const handleCreate = () => {
+    resetForm();
+    openAddFee.value = true;
+};
+
+const handleSubmitFee = () => {
+    feeForm.post('/fees', {
+        onSuccess: () => {
+            openAddFee.value = false;
+            resetForm();
+        },
+    });
+};
+
+const handleEdit = (feeId: number) => {
+    const fee = feeList.find(f => f.id === feeId);
+    if (fee) {
+        selectedEditFeeId.value = fee.id;
+        editForm.grade_id = fee.grade_id.toString();
+        editForm.amount = fee.amount.toString();
+        editForm.term = fee.term;
+        editForm.due_date = fee.due_date;
+
+        openEditFee.value = true;
+    }
+};
+
+const handleUpdateFee = () => {
+    if (selectedEditFeeId.value) {
+        editForm.put(`/fees/${selectedEditFeeId.value}`, {
+            onSuccess: () => {
+                openEditFee.value = false;
+                resetEditForm();
+            },
+        });
+    }
 };
 
 const handleDelete = (feeId: number) => {
     if (confirm('Are you sure you want to delete this fee?')) {
-        alert('Delete fee: ' + feeId);
+        router.delete(`/fees/${feeId}`);
     }
-};
-
-const handleCreate = () => {
-    alert('Create new fee');
 };
 
 const formatCurrency = (amount: number) => {
@@ -249,6 +312,7 @@ const uniqueGrades = [...new Set(feeList.map(f => f.grade_id))].length;
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50 dark:bg-sidebar-accent">
                             <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">#</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Grade</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Term</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Amount</th>
@@ -257,11 +321,10 @@ const uniqueGrades = [...new Set(feeList.map(f => f.grade_id))].length;
                             </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-sidebar">
-                            <tr v-for="(fee,index) in feeList" :key="fee.id" class="hover:bg-gray-50 dark:hover:bg-sidebar-accent">
+                            <tr v-for="(fee, index) in feeList" :key="fee.id" class="hover:bg-gray-50 dark:hover:bg-sidebar-accent">
                                 <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
-                                    {{ index+=1 }}
+                                    {{ index + 1 }}
                                 </td>
-
                                 <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
                                     {{ fee.grade?.name || 'N/A' }}
                                 </td>
@@ -276,24 +339,12 @@ const uniqueGrades = [...new Set(feeList.map(f => f.grade_id))].length;
                                 </td>
                                 <td class="whitespace-nowrap px-6 py-4 text-right">
                                     <div class="flex items-center justify-end gap-2">
-                                        <button
-                                            @click="handleView(fee.id)"
-                                            class="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
-                                        >
-                                            View
-                                        </button>
-                                        <button
-                                            @click="handleEdit(fee.id)"
-                                            class="rounded px-3 py-1 text-sm text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950"
-                                        >
+                                        <Button variant="ghost" size="sm" @click="handleEdit(fee.id)">
                                             Edit
-                                        </button>
-                                        <button
-                                            @click="handleDelete(fee.id)"
-                                            class="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
-                                        >
+                                        </Button>
+                                        <Button variant="destructive" size="sm" @click="handleDelete(fee.id)">
                                             Delete
-                                        </button>
+                                        </Button>
                                     </div>
                                 </td>
                             </tr>
@@ -311,5 +362,174 @@ const uniqueGrades = [...new Set(feeList.map(f => f.grade_id))].length;
                 </div>
             </div>
         </div>
+
+
+        <!-- Add Fee Modal -->
+        <Dialog v-model:open="openAddFee">
+            <DialogContent
+                class="sm:max-w-2xl"
+                @interact-outside="(e) => e.preventDefault()"
+                @escape-key-down="(e) => e.preventDefault()"
+            >
+                <DialogHeader>
+                    <DialogTitle>Add New Fee</DialogTitle>
+                    <DialogDescription>
+                        Enter the fee details below.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div class="grid gap-4 py-4">
+                    <!-- Grade -->
+                    <div class="grid gap-2">
+                        <Label for="grade_id">Grade</Label>
+                        <Select v-model="feeForm.grade_id">
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a grade" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem v-for="grade in gradesList" :key="grade.id" :value="grade.id.toString()">
+                                    {{ grade.name }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <span v-if="feeForm.errors.grade_id" class="text-sm text-red-600">{{ feeForm.errors.grade_id }}</span>
+                    </div>
+
+                    <!-- Term -->
+                    <div class="grid gap-2">
+                        <Label for="term">Term</Label>
+                        <Input
+                            id="term"
+                            v-model="feeForm.term"
+                            type="text"
+                            placeholder="e.g., Term 1 2025"
+                        />
+                        <span v-if="feeForm.errors.term" class="text-sm text-red-600">{{ feeForm.errors.term }}</span>
+                    </div>
+
+                    <!-- Amount and Due Date -->
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="grid gap-2">
+                            <Label for="amount">Amount (KES)</Label>
+                            <Input
+                                id="amount"
+                                v-model="feeForm.amount"
+                                type="number"
+                                step="0.01"
+                                placeholder="15000.00"
+                            />
+                            <span v-if="feeForm.errors.amount" class="text-sm text-red-600">{{ feeForm.errors.amount }}</span>
+                        </div>
+                        <div class="grid gap-2">
+                            <Label for="due_date">Due Date</Label>
+                            <Input
+                                id="due_date"
+                                v-model="feeForm.due_date"
+                                type="date"
+                            />
+                            <span v-if="feeForm.errors.due_date" class="text-sm text-red-600">{{ feeForm.errors.due_date }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <DialogFooter class="pt-4">
+                    <DialogClose as-child>
+                        <Button variant="outline" @click="resetForm">
+                            Cancel
+                        </Button>
+                    </DialogClose>
+                    <Button
+                        @click="handleSubmitFee"
+                        :disabled="feeForm.processing"
+                    >
+                        {{ feeForm.processing ? 'Creating...' : 'Create Fee' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Edit Fee Modal -->
+        <Dialog v-model:open="openEditFee">
+            <DialogContent
+                class="sm:max-w-2xl"
+                @interact-outside="(e) => e.preventDefault()"
+                @escape-key-down="(e) => e.preventDefault()"
+            >
+                <DialogHeader>
+                    <DialogTitle>Edit Fee</DialogTitle>
+                    <DialogDescription>
+                        Update the fee details below.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div class="grid gap-4 py-4">
+                    <!-- Grade -->
+                    <div class="grid gap-2">
+                        <Label for="edit_grade_id">Grade</Label>
+                        <Select v-model="editForm.grade_id">
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a grade" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem v-for="grade in gradesList" :key="grade.id" :value="grade.id.toString()">
+                                    {{ grade.name }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <span v-if="editForm.errors.grade_id" class="text-sm text-red-600">{{ editForm.errors.grade_id }}</span>
+                    </div>
+
+                    <!-- Term -->
+                    <div class="grid gap-2">
+                        <Label for="edit_term">Term</Label>
+                        <Input
+                            id="edit_term"
+                            v-model="editForm.term"
+                            type="text"
+                            placeholder="e.g., Term 1 2025"
+                        />
+                        <span v-if="editForm.errors.term" class="text-sm text-red-600">{{ editForm.errors.term }}</span>
+                    </div>
+
+                    <!-- Amount and Due Date -->
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="grid gap-2">
+                            <Label for="edit_amount">Amount (KES)</Label>
+                            <Input
+                                id="edit_amount"
+                                v-model="editForm.amount"
+                                type="number"
+                                step="0.01"
+                                placeholder="15000.00"
+                            />
+                            <span v-if="editForm.errors.amount" class="text-sm text-red-600">{{ editForm.errors.amount }}</span>
+                        </div>
+                        <div class="grid gap-2">
+                            <Label for="edit_due_date">Due Date</Label>
+                            <Input
+                                id="edit_due_date"
+                                v-model="editForm.due_date"
+                                type="date"
+                            />
+                            <span v-if="editForm.errors.due_date" class="text-sm text-red-600">{{ editForm.errors.due_date }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <DialogFooter class="pt-4">
+                    <DialogClose as-child>
+                        <Button variant="outline" @click="resetEditForm">
+                            Cancel
+                        </Button>
+                    </DialogClose>
+                    <Button
+                        @click="handleUpdateFee"
+                        :disabled="editForm.processing"
+                    >
+                        {{ editForm.processing ? 'Updating...' : 'Update Fee' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>

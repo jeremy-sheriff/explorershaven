@@ -20,7 +20,11 @@ Route::get('/students/{student}', [StudentController::class, 'show'])->name('stu
 Route::put('/students/{student}', [StudentController::class, 'update'])->name('students.update');
 Route::delete('/students/{student}', [StudentController::class, 'destroy'])->name('students.destroy');
 
+// Fee routes
 Route::get('/fees', [FeeController::class, 'index'])->name('fees.index');
+Route::post('/fees', [FeeController::class, 'store'])->name('fees.store');
+Route::put('/fees/{fee}', [FeeController::class, 'update'])->name('fees.update');
+Route::delete('/fees/{fee}', [FeeController::class, 'destroy'])->name('fees.destroy');
 
 Route::get('/fee-payments', [FeePaymentController::class, 'index'])->name('fee-payments.index');
 Route::post('/fee-payments', [FeePaymentController::class, 'store'])->name('fee-payments.store');

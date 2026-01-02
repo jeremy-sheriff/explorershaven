@@ -34,7 +34,7 @@ const mainNavItems: NavItem[] = [
         icon: UsersIcon,
     },
     {
-        title: 'Fees',
+        title: 'Fee Structure',
         href: fees.index(),
         icon: DollarSign,
     },

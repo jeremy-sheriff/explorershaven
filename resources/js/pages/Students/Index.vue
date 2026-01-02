@@ -42,6 +42,8 @@ import {
     DrawerTitle,
     DrawerTrigger,
 } from '@/components/ui/drawer'
+
+import {Checkbox} from "@/components/ui/checkbox";
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { computed, ref } from "vue";
@@ -92,10 +94,12 @@ const studentForm = useForm({
     first_name: '',
     middle_name: '',
     last_name: '',
+    gender: '',
     grade_id: '',
     guardian_first_name: '',
     guardian_last_name: '',
     guardian_phone: '',
+    guardian_gender: '',  // ADD THIS
 })
 
 const editForm = useForm({
@@ -103,10 +107,12 @@ const editForm = useForm({
     first_name: '',
     middle_name: '',
     last_name: '',
+    gender: '',
     grade_id: '',
     guardian_first_name: '',
     guardian_last_name: '',
     guardian_phone: '',
+    guardian_gender: '',  // ADD THIS
 })
 
 const resetForm = () => {
@@ -247,7 +253,7 @@ const formatDate = (date: string) => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            <TableRow v-for="(student, index) in studentsList" :key="student.id">
+                            <TableRow v-for="(student, index) in studentsList" :key="student.id" :class="['hover:bg-gray-50 dark:hover:bg-sidebar-accent', { 'bg-muted/50': index % 2 === 0 }]">
                                 <TableCell class="font-medium">
                                     {{ index + 1 }}
                                 </TableCell>
@@ -368,22 +374,40 @@ const formatDate = (date: string) => {
                         </div>
                     </div>
 
-                    <!-- Grade -->
-                    <div class="grid gap-2">
-                        <Label for="grade_id">
-                            Grade
-                        </Label>
-                        <Select v-model="studentForm.grade_id">
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a grade" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem v-for="grade in gradesList" :key="grade.id" :value="grade.id.toString()">
-                                    {{ grade.name }}
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <span v-if="studentForm.errors.grade_id" class="text-sm text-red-600">{{ studentForm.errors.grade_id }}</span>
+                    <!-- Gender and Grade -->
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="grid gap-2">
+                            <Label for="gender">
+                                Gender
+                            </Label>
+                            <Select v-model="studentForm.gender">
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select gender" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="male">Male</SelectItem>
+                                    <SelectItem value="female">Female</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <span v-if="studentForm.errors.gender" class="text-sm text-red-600">{{ studentForm.errors.gender }}</span>
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="grade_id">
+                                Grade
+                            </Label>
+                            <Select v-model="studentForm.grade_id">
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a grade" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem v-for="grade in gradesList" :key="grade.id" :value="grade.id.toString()">
+                                        {{ grade.name }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <span v-if="studentForm.errors.grade_id" class="text-sm text-red-600">{{ studentForm.errors.grade_id }}</span>
+                        </div>
                     </div>
 
                     <!-- Guardian Information -->
@@ -414,17 +438,36 @@ const formatDate = (date: string) => {
                                     <span v-if="studentForm.errors.guardian_last_name" class="text-sm text-red-600">{{ studentForm.errors.guardian_last_name }}</span>
                                 </div>
                             </div>
-                            <div class="grid gap-2">
-                                <Label for="guardian_phone">
-                                    Guardian Phone Number
-                                </Label>
-                                <Input
-                                    id="guardian_phone"
-                                    v-model="studentForm.guardian_phone"
-                                    placeholder="0712345678"
-                                    type="tel"
-                                />
-                                <span v-if="studentForm.errors.guardian_phone" class="text-sm text-red-600">{{ studentForm.errors.guardian_phone }}</span>
+
+                            <div class="grid gap-4 sm:grid-cols-2">
+                                <div class="grid gap-2">
+                                    <Label for="guardian_gender">
+                                        Guardian Gender
+                                    </Label>
+                                    <Select v-model="studentForm.guardian_gender">
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select gender" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="male">Male</SelectItem>
+                                            <SelectItem value="female">Female</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <span v-if="studentForm.errors.guardian_gender" class="text-sm text-red-600">{{ studentForm.errors.guardian_gender }}</span>
+                                </div>
+
+                                <div class="grid gap-2">
+                                    <Label for="guardian_phone">
+                                        Guardian Phone Number
+                                    </Label>
+                                    <Input
+                                        id="guardian_phone"
+                                        v-model="studentForm.guardian_phone"
+                                        placeholder="0712345678"
+                                        type="tel"
+                                    />
+                                    <span v-if="studentForm.errors.guardian_phone" class="text-sm text-red-600">{{ studentForm.errors.guardian_phone }}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
