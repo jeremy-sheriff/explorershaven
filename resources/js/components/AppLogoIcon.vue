@@ -13,17 +13,19 @@ defineProps<Props>();
 </script>
 
 <template>
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 40 42"
-        :class="className"
-        v-bind="$attrs"
-    >
-        <path
-            fill="currentColor"
-            fill-rule="evenodd"
-            clip-rule="evenodd"
-            d="M17.2 5.633 8.6.855 0 5.633v26.51l16.2 9 16.2-9v-8.442l7.6-4.223V9.856l-8.6-4.777-8.6 4.777V18.3l-5.6 3.111V5.633ZM38 18.301l-5.6 3.11v-6.157l5.6-3.11V18.3Zm-1.06-7.856-5.54 3.078-5.54-3.079 5.54-3.078 5.54 3.079ZM24.8 18.3v-6.157l5.6 3.111v6.158L24.8 18.3Zm-1 1.732 5.54 3.078-13.14 7.302-5.54-3.078 13.14-7.3v-.002Zm-16.2 7.89 7.6 4.222V38.3L2 30.966V7.92l5.6 3.111v16.892ZM8.6 9.3 3.06 6.222 8.6 3.143l5.54 3.08L8.6 9.3Zm21.8 15.51-13.2 7.334V38.3l13.2-7.334v-6.156ZM9.6 11.034l5.6-3.11v14.6l-5.6 3.11v-14.6Z"
-        />
+    <svg width="400" height="400" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="200" cy="180" r="120" fill="#FFF9E6" />
+
+        <path d="M200 30L215 70H185L200 30Z" fill="#FFB800" />
+        <path d="M200 330L215 290H185L200 330Z" fill="#FFB800" />
+        <path d="M370 180L330 195V165L370 180Z" fill="#FFB800" />
+        <path d="M30 180L70 195V165L30 180Z" fill="#FFB800" />
+
+        <path d="M100 220L200 260L300 220L200 240L100 220Z" fill="#4A90E2" />
+        <path d="M200 240L200 130L260 220H140L200 130" stroke="#4A90E2" stroke-width="8" stroke-linejoin="round" />
+
+        <text x="200" y="360" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#2C3E50" text-anchor="middle">EXPLORERS</text>
+        <text x="200" y="390" font-family="Arial, sans-serif" font-size="24" letter-spacing="4" fill="#4A90E2" text-anchor="middle">HAVEN</text>
     </svg>
+
 </template>
