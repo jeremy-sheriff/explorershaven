@@ -45,7 +45,7 @@ const mainNavItems: NavItem[] = [
     },
 
     {
-        title: 'Fee Credits',
+        title: 'Fee Credits (Advance)',
         href: feeCredits.index(),
         icon: Receipt,
     },

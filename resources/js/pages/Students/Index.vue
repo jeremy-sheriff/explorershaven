@@ -717,7 +717,6 @@ const formatDate = (date: string) => {
                                         <TableHead>Fee Term</TableHead>
                                         <TableHead>Amount Paid</TableHead>
                                         <TableHead>Balance</TableHead>
-                                        <TableHead>Payment Method</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -735,7 +734,6 @@ const formatDate = (date: string) => {
                                         <TableCell class="font-medium text-red-600">
                                             {{ formatCurrency(payment.balance) }}
                                         </TableCell>
-                                        <TableCell>{{ payment.payment_method || 'N/A' }}</TableCell>
                                     </TableRow>
                                 </TableBody>
                             </Table>
