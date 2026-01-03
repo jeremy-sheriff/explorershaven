@@ -17,7 +17,7 @@ class FeePaymentController extends Controller
     {
         // Determine current term based on current month
         $currentMonth = now()->month;
-        $currentYear = 2025;
+        $currentYear = 2026;
 
         $currentTerm = match(true) {
             $currentMonth >= 1 && $currentMonth <= 4 => "Term 1 {$currentYear}",
