@@ -20,10 +20,10 @@ class FeePaymentController extends Controller
         $currentYear = 2026;
 
         $currentTerm = match(true) {
-            $currentMonth >= 1 && $currentMonth <= 4 => "Term 1 {$currentYear}",
-            $currentMonth >= 5 && $currentMonth <= 8 => "Term 2 {$currentYear}",
-            $currentMonth >= 9 && $currentMonth <= 12 => "Term 3 {$currentYear}",
-            default => "Term 1 {$currentYear}"
+            $currentMonth >= 1 && $currentMonth <= 4 => "TERM ONE {$currentYear}",
+            $currentMonth >= 5 && $currentMonth <= 8 => "TERM TWO {$currentYear}",
+            $currentMonth >= 9 && $currentMonth <= 12 => "TERM THREE {$currentYear}",
+            default => "Term ONE {$currentYear}"
         };
 
         $query = FeePayment::with(['student.grade', 'fee.grade']);
