@@ -627,6 +627,7 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50 dark:bg-sidebar-accent">
                             <tr>
+                                <th>#</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Student</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Grade</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Term</th>
