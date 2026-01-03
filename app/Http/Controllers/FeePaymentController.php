@@ -157,10 +157,10 @@ class FeePaymentController extends Controller
             // Determine current term
             $currentMonth = now()->month;
             $currentTerm = match(true) {
-                $currentMonth >= 1 && $currentMonth <= 4 => 'Term 1 2025',
-                $currentMonth >= 5 && $currentMonth <= 8 => 'Term 2 2025',
-                $currentMonth >= 9 && $currentMonth <= 12 => 'Term 3 2025',
-                default => 'Term 1 2025'
+                $currentMonth >= 1 && $currentMonth <= 4 => "TERM ONE {$currentYear}",
+                $currentMonth >= 5 && $currentMonth <= 8 => "TERM TWO {$currentYear}",
+                $currentMonth >= 9 && $currentMonth <= 12 => "TERM THREE {$currentYear}",
+                default => "TERM ONE {$currentYear}"
             };
 
             // Validate that the fee is for the current term
@@ -242,10 +242,10 @@ class FeePaymentController extends Controller
             // Determine current term
             $currentMonth = now()->month;
             $currentTerm = match(true) {
-                $currentMonth >= 1 && $currentMonth <= 4 => 'Term 1 2025',
-                $currentMonth >= 5 && $currentMonth <= 8 => 'Term 2 2025',
-                $currentMonth >= 9 && $currentMonth <= 12 => 'Term 3 2025',
-                default => 'Term 1 2025'
+                $currentMonth >= 1 && $currentMonth <= 4 => "TERM ONE {$currentYear}",
+                $currentMonth >= 5 && $currentMonth <= 8 => "TERM TWO {$currentYear}",
+                $currentMonth >= 9 && $currentMonth <= 12 => "TERM THREE {$currentYear}",
+                default => "TERM ONE {$currentYear}"
             };
 
             // Validate that the fee is for the current term
