@@ -153,6 +153,7 @@ class FeePaymentController extends Controller
             $fee = Fee::findOrFail($validated['fee_id']);
             $studentId = $validated['student_id'];
             $amountPaid = $validated['amount_paid'];
+            $currentYear = 2026;
 
             // Determine current term
             $currentMonth = now()->month;
@@ -241,6 +242,7 @@ class FeePaymentController extends Controller
 
             // Determine current term
             $currentMonth = now()->month;
+            $currentYear = 2026;
             $currentTerm = match(true) {
                 $currentMonth >= 1 && $currentMonth <= 4 => "TERM ONE {$currentYear}",
                 $currentMonth >= 5 && $currentMonth <= 8 => "TERM TWO {$currentYear}",
