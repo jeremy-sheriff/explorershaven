@@ -23,7 +23,7 @@ class FeePaymentController extends Controller
             $currentMonth >= 1 && $currentMonth <= 4 => "TERM ONE {$currentYear}",
             $currentMonth >= 5 && $currentMonth <= 8 => "TERM TWO {$currentYear}",
             $currentMonth >= 9 && $currentMonth <= 12 => "TERM THREE {$currentYear}",
-            default => "Term ONE {$currentYear}"
+            default => "TERM ONE {$currentYear}"
         };
 
         $query = FeePayment::with(['student.grade', 'fee.grade']);
