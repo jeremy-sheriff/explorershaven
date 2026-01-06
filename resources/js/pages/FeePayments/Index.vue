@@ -83,14 +83,14 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const paymentForm = useForm({
-    student_id: '',
+    student_adm_no: '',
     fee_id: '',
     amount_paid: '',
     payment_date: new Date().toISOString().split('T')[0],
 });
 
 const editForm = useForm({
-    student_id: '',
+    student_adm_no: '',
     fee_id: '',
     amount_paid: '',
     payment_date: '',
@@ -123,7 +123,7 @@ const handleEdit = (paymentId: number) => {
     const payment = paymentList.find(p => p.id === paymentId);
     if (payment) {
         selectedEditPaymentId.value = payment.id;
-        editForm.student_id = payment.student_id.toString();
+        editForm.student_adm_no = payment.student?.adm_no || '';
         editForm.fee_id = payment.fee_id.toString();
         editForm.amount_paid = payment.amount_paid.toString();
         editForm.payment_date = payment.payment_date;
@@ -247,19 +247,27 @@ const getStudentName = (studentId: string) => {
     return student ? `${student.first_name} ${student.last_name} - ${student.adm_no}` : '';
 };
 
-const filteredFeesForAdd = computed(() => {
-    if (!paymentForm.student_id) return feesList;
+// Find student by admission number for Add form
+const selectedStudentForAdd = computed(() => {
+    if (!paymentForm.student_adm_no) return null;
+    return studentsList.find(s => s.adm_no === paymentForm.student_adm_no);
+});
 
-    const student = studentsList.find(s => s.id.toString() === paymentForm.student_id);
+// Find student by admission number for Edit form
+const selectedStudentForEdit = computed(() => {
+    if (!editForm.student_adm_no) return null;
+    return studentsList.find(s => s.adm_no === editForm.student_adm_no);
+});
+
+const filteredFeesForAdd = computed(() => {
+    const student = selectedStudentForAdd.value;
     if (!student || !student.grade_id) return feesList;
 
     return feesList.filter(f => f.grade_id === student.grade_id);
 });
 
 const filteredFeesForEdit = computed(() => {
-    if (!editForm.student_id) return feesList;
-
-    const student = studentsList.find(s => s.id.toString() === editForm.student_id);
+    const student = selectedStudentForEdit.value;
     if (!student || !student.grade_id) return feesList;
 
     return feesList.filter(f => f.grade_id === student.grade_id);
@@ -277,9 +285,12 @@ const getAdjustedBalance = (studentId: string, feeId: string) => {
 };
 
 const currentBalanceForAdd = computed(() => {
-    if (!paymentForm.student_id || !paymentForm.fee_id) return null;
+    if (!paymentForm.student_adm_no || !paymentForm.fee_id) return null;
 
-    const studentId = paymentForm.student_id;
+    const student = selectedStudentForAdd.value;
+    if (!student) return null;
+
+    const studentId = student.id.toString();
     const feeId = paymentForm.fee_id;
 
     // Check if we have adjusted balance data
@@ -306,9 +317,12 @@ const currentBalanceForAdd = computed(() => {
 });
 
 const currentBalanceForEdit = computed(() => {
-    if (!editForm.student_id || !editForm.fee_id) return null;
+    if (!editForm.student_adm_no || !editForm.fee_id) return null;
 
-    const studentId = editForm.student_id;
+    const student = selectedStudentForEdit.value;
+    if (!student) return null;
+
+    const studentId = student.id.toString();
     const feeId = editForm.fee_id;
 
     // Check if we have adjusted balance data
@@ -336,9 +350,12 @@ const currentBalanceForEdit = computed(() => {
 });
 
 const isFeeFullyPaidForAdd = computed(() => {
-    if (!paymentForm.student_id || !paymentForm.fee_id) return false;
+    if (!paymentForm.student_adm_no || !paymentForm.fee_id) return false;
 
-    const studentId = paymentForm.student_id;
+    const student = selectedStudentForAdd.value;
+    if (!student) return false;
+
+    const studentId = student.id.toString();
     const feeId = paymentForm.fee_id;
 
     const existingPayments = paymentList.filter(
@@ -351,9 +368,12 @@ const isFeeFullyPaidForAdd = computed(() => {
 });
 
 const isFeeFullyPaidForEdit = computed(() => {
-    if (!editForm.student_id || !editForm.fee_id) return false;
+    if (!editForm.student_adm_no || !editForm.fee_id) return false;
 
-    const studentId = editForm.student_id;
+    const student = selectedStudentForEdit.value;
+    if (!student) return false;
+
+    const studentId = student.id.toString();
     const feeId = editForm.fee_id;
 
     const existingPayments = paymentList.filter(
@@ -367,11 +387,11 @@ const isFeeFullyPaidForEdit = computed(() => {
     return existingPayments[0].balance === 0;
 });
 
-watch(() => paymentForm.student_id, () => {
+watch(() => paymentForm.student_adm_no, () => {
     paymentForm.fee_id = '';
 });
 
-watch(() => editForm.student_id, () => {
+watch(() => editForm.student_adm_no, () => {
     editForm.fee_id = '';
 });
 
@@ -388,6 +408,8 @@ const getStudentCredit = (studentId: string) => {
 
 const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => sum + parseFloat(credit.amount || 0), 0);
 </script>
+
+
 <template>
     <Head title="Fee Payments" />
 
@@ -697,7 +719,6 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                 </div>
             </div>
         </div>
-
         <!-- Add Payment Modal -->
         <Dialog v-model:open="openAddPayment">
             <DialogContent
@@ -713,26 +734,37 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                 </DialogHeader>
 
                 <div class="grid gap-4 py-4">
-                    <!-- Student -->
+                    <!-- Student Admission Number -->
                     <div class="grid gap-2">
-                        <Label for="student_id">Student</Label>
-                        <Select v-model="paymentForm.student_id">
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a student" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem v-for="student in studentsList" :key="student.id" :value="student.id.toString()">
-                                    {{ student.first_name }} {{ student.last_name }} - {{ student.adm_no }} ({{ student.grade?.name }})
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <span v-if="paymentForm.errors.student_id" class="text-sm text-red-600">{{ paymentForm.errors.student_id }}</span>
+                        <Label for="student_adm_no">Student Admission Number</Label>
+                        <Input
+                            id="student_adm_no"
+                            v-model="paymentForm.student_adm_no"
+                            type="text"
+                            placeholder="Enter admission number (e.g., ADM001)"
+                            class="w-full"
+                        />
+                        <span v-if="paymentForm.errors.student_adm_no" class="text-sm text-red-600">{{ paymentForm.errors.student_adm_no }}</span>
+
+                        <!-- Show student info if found -->
+                        <div v-if="selectedStudentForAdd" class="rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
+                            <p class="text-sm font-medium text-blue-800 dark:text-blue-200">
+                                ✓ {{ selectedStudentForAdd.first_name }} {{ selectedStudentForAdd.last_name }} - {{ selectedStudentForAdd.grade?.name }}
+                            </p>
+                        </div>
+
+                        <!-- Show error if admission number entered but student not found -->
+                        <div v-if="paymentForm.student_adm_no && !selectedStudentForAdd" class="rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
+                            <p class="text-sm font-medium text-red-800 dark:text-red-200">
+                                ✗ Student not found with admission number: {{ paymentForm.student_adm_no }}
+                            </p>
+                        </div>
 
                         <!-- Show available credit if exists -->
-                        <div v-if="paymentForm.student_id && getStudentCredit(paymentForm.student_id) > 0"
+                        <div v-if="selectedStudentForAdd && getStudentCredit(selectedStudentForAdd.id.toString()) > 0"
                              class="rounded-lg bg-green-50 p-3 dark:bg-green-900/20">
                             <p class="text-sm font-medium text-green-800 dark:text-green-200">
-                                💰 Available Credit: {{ formatCurrency(getStudentCredit(paymentForm.student_id)) }}
+                                💰 Available Credit: {{ formatCurrency(getStudentCredit(selectedStudentForAdd.id.toString())) }}
                             </p>
                             <p class="text-xs text-green-600 dark:text-green-400">
                                 This credit can be applied to future fees
@@ -743,7 +775,7 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                     <!-- Fee -->
                     <div class="grid gap-2">
                         <Label for="fee_id">Fee</Label>
-                        <Select v-model="paymentForm.fee_id" :disabled="!paymentForm.student_id">
+                        <Select v-model="paymentForm.fee_id" :disabled="!selectedStudentForAdd">
                             <SelectTrigger>
                                 <SelectValue placeholder="Select a fee" />
                             </SelectTrigger>
@@ -753,7 +785,7 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                                 </SelectItem>
                             </SelectContent>
                         </Select>
-                        <span v-if="!paymentForm.student_id" class="text-xs text-muted-foreground">Select a student first</span>
+                        <span v-if="!selectedStudentForAdd" class="text-xs text-muted-foreground">Enter a valid admission number first</span>
                         <span v-if="paymentForm.errors.fee_id" class="text-sm text-red-600">{{ paymentForm.errors.fee_id }}</span>
                     </div>
 
@@ -828,7 +860,7 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                     </DialogClose>
                     <Button
                         @click="handleSubmitPayment"
-                        :disabled="paymentForm.processing || isFeeFullyPaidForAdd"
+                        :disabled="paymentForm.processing || isFeeFullyPaidForAdd || !selectedStudentForAdd"
                     >
                         {{ paymentForm.processing ? 'Recording...' : 'Record Payment' }}
                     </Button>
@@ -851,26 +883,37 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                 </DialogHeader>
 
                 <div class="grid gap-4 py-4">
-                    <!-- Student -->
+                    <!-- Student Admission Number -->
                     <div class="grid gap-2">
-                        <Label for="edit_student_id">Student</Label>
-                        <Select v-model="editForm.student_id">
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a student" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem v-for="student in studentsList" :key="student.id" :value="student.id.toString()">
-                                    {{ student.first_name }} {{ student.last_name }} - {{ student.adm_no }} ({{ student.grade?.name }})
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <span v-if="editForm.errors.student_id" class="text-sm text-red-600">{{ editForm.errors.student_id }}</span>
+                        <Label for="edit_student_adm_no">Student Admission Number</Label>
+                        <Input
+                            id="edit_student_adm_no"
+                            v-model="editForm.student_adm_no"
+                            type="text"
+                            placeholder="Enter admission number"
+                            class="w-full"
+                        />
+                        <span v-if="editForm.errors.student_adm_no" class="text-sm text-red-600">{{ editForm.errors.student_adm_no }}</span>
+
+                        <!-- Show student info if found -->
+                        <div v-if="selectedStudentForEdit" class="rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
+                            <p class="text-sm font-medium text-blue-800 dark:text-blue-200">
+                                ✓ {{ selectedStudentForEdit.first_name }} {{ selectedStudentForEdit.last_name }} - {{ selectedStudentForEdit.grade?.name }}
+                            </p>
+                        </div>
+
+                        <!-- Show error if admission number entered but student not found -->
+                        <div v-if="editForm.student_adm_no && !selectedStudentForEdit" class="rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
+                            <p class="text-sm font-medium text-red-800 dark:text-red-200">
+                                ✗ Student not found with admission number: {{ editForm.student_adm_no }}
+                            </p>
+                        </div>
 
                         <!-- Show available credit if exists -->
-                        <div v-if="editForm.student_id && getStudentCredit(editForm.student_id) > 0"
+                        <div v-if="selectedStudentForEdit && getStudentCredit(selectedStudentForEdit.id.toString()) > 0"
                              class="rounded-lg bg-green-50 p-3 dark:bg-green-900/20">
                             <p class="text-sm font-medium text-green-800 dark:text-green-200">
-                                💰 Available Credit: {{ formatCurrency(getStudentCredit(editForm.student_id)) }}
+                                💰 Available Credit: {{ formatCurrency(getStudentCredit(selectedStudentForEdit.id.toString())) }}
                             </p>
                         </div>
                     </div>
@@ -878,7 +921,7 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                     <!-- Fee -->
                     <div class="grid gap-2">
                         <Label for="edit_fee_id">Fee</Label>
-                        <Select v-model="editForm.fee_id" :disabled="!editForm.student_id">
+                        <Select v-model="editForm.fee_id" :disabled="!selectedStudentForEdit">
                             <SelectTrigger>
                                 <SelectValue placeholder="Select a fee" />
                             </SelectTrigger>
@@ -888,7 +931,7 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                                 </SelectItem>
                             </SelectContent>
                         </Select>
-                        <span v-if="!editForm.student_id" class="text-xs text-muted-foreground">Select a student first</span>
+                        <span v-if="!selectedStudentForEdit" class="text-xs text-muted-foreground">Enter a valid admission number first</span>
                         <span v-if="editForm.errors.fee_id" class="text-sm text-red-600">{{ editForm.errors.fee_id }}</span>
                     </div>
 
@@ -963,7 +1006,7 @@ const totalCredits = Object.values(creditsData).flat().reduce((sum, credit) => s
                     </DialogClose>
                     <Button
                         @click="handleUpdatePayment"
-                        :disabled="editForm.processing || isFeeFullyPaidForEdit"
+                        :disabled="editForm.processing || isFeeFullyPaidForEdit || !selectedStudentForEdit"
                     >
                         {{ editForm.processing ? 'Updating...' : 'Update Payment' }}
                     </Button>

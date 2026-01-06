@@ -143,11 +143,15 @@ class FeePaymentController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'student_id' => 'required|exists:students,id',
+            'student_adm_no' => 'required|exists:students,adm_no',
             'fee_id' => 'required|exists:fees,id',
             'amount_paid' => 'required|numeric|min:0',
             'payment_date' => 'required|date',
         ]);
+
+        // Get student ID from admission number
+        $student = Student::where('adm_no', $validated['student_adm_no'])->firstOrFail();
+        $validated['student_id'] = $student->id;
 
         DB::transaction(function () use ($validated) {
             $fee = Fee::findOrFail($validated['fee_id']);
@@ -229,11 +233,15 @@ class FeePaymentController extends Controller
     public function update(Request $request, FeePayment $feePayment)
     {
         $validated = $request->validate([
-            'student_id' => 'required|exists:students,id',
+            'student_adm_no' => 'required|exists:students,adm_no',
             'fee_id' => 'required|exists:fees,id',
             'amount_paid' => 'required|numeric|min:0',
             'payment_date' => 'required|date',
         ]);
+
+        // Get student ID from admission number
+        $student = Student::where('adm_no', $validated['student_adm_no'])->firstOrFail();
+        $validated['student_id'] = $student->id;
 
         DB::transaction(function () use ($validated, $feePayment) {
             $fee = Fee::findOrFail($validated['fee_id']);
