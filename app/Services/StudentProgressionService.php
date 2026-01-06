@@ -81,7 +81,7 @@ class StudentProgressionService
      */
     public function promoteAllStudents(?string $notes = null, ?int $processedBy = null): array
     {
-        $grades = Grade::orderBy('id')->get();
+        $grades = Grade::orderBy('level')->get();
         $results = [
             'success' => 0,
             'graduated' => 0,
@@ -91,8 +91,8 @@ class StudentProgressionService
 
         DB::transaction(function () use ($grades, $notes, $processedBy, &$results) {
             foreach ($grades as $grade) {
-                // Find next grade
-                $nextGrade = Grade::where('id', '>', $grade->id)->orderBy('id')->first();
+                // Find next grade by level (not by ID)
+                $nextGrade = Grade::where('level', '>', $grade->level)->orderBy('level')->first();
 
                 if (!$nextGrade) {
                     // This is the highest grade - students should graduate

@@ -148,8 +148,11 @@ const handleUpdateSettings = () => {
 const filteredToGrades = computed(() => {
     if (!promoteGradeForm.from_grade_id) return gradesList;
 
-    const fromGradeId = parseInt(promoteGradeForm.from_grade_id);
-    return gradesList.filter(g => g.id > fromGradeId);
+    const fromGrade = gradesList.find(g => g.id.toString() === promoteGradeForm.from_grade_id);
+    if (!fromGrade) return gradesList;
+
+    // Filter by level instead of ID
+    return gradesList.filter(g => g.level > fromGrade.level);
 });
 
 const getNextYear = () => {

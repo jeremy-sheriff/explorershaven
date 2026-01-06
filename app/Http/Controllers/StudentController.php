@@ -14,12 +14,19 @@ class StudentController extends Controller
 {
     public function index()
     {
-        $students = Student::with(['guardian', 'grade'])->get();
-        $grades = Grade::orderBy('level', 'asc')->get();
+        $currentYear = SystemSetting::currentAcademicYear();
+        $grades = Grade::withCount(['students' => function ($query) {
+            $query->active()->currentYear();
+        }])->orderBy('level')->get();
 
-        return Inertia::render('Students/Index', [
-            'students' => $students,
-            'grades' => $grades
+        $stats = $this->progressionService->getPromotionStats($currentYear);
+
+        return Inertia::render('StudentProgression/Index', [
+            'grades' => $grades,
+            'currentYear' => $currentYear,
+            'stats' => $stats,
+            'maxGradeLevel' => SystemSetting::maxGradeLevel(),
+            'autoGraduateEnabled' => SystemSetting::isAutoGraduateEnabled(),
         ]);
     }
 
