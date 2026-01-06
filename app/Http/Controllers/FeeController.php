@@ -9,6 +9,15 @@ use Inertia\Inertia;
 
 class FeeController extends Controller
 {
+    /**
+     * Allowed terms for validation
+     */
+    private const ALLOWED_TERMS = [
+        'TERM ONE 2026',
+        'TERM TWO 2026',
+        'TERM THREE 2026',
+    ];
+
     public function index(Request $request)
     {
         $query = Fee::with('grade');
@@ -42,12 +51,7 @@ class FeeController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'grade_id' => 'required|exists:grades,id',
-            'amount' => 'required|numeric|min:0',
-            'term' => 'required|string|max:255',
-            'due_date' => 'required|date',
-        ]);
+        $validated = $request->validate($this->validationRules());
 
         Fee::create($validated);
 
@@ -57,12 +61,7 @@ class FeeController extends Controller
 
     public function update(Request $request, Fee $fee)
     {
-        $validated = $request->validate([
-            'grade_id' => 'required|exists:grades,id',
-            'amount' => 'required|numeric|min:0',
-            'term' => 'required|string|max:255',
-            'due_date' => 'required|date',
-        ]);
+        $validated = $request->validate($this->validationRules());
 
         $fee->update($validated);
 
@@ -76,5 +75,30 @@ class FeeController extends Controller
 
         return redirect()->route('fees.index')
             ->with('success', 'Fee deleted successfully.');
+    }
+
+    /**
+     * Get validation rules for fee
+     *
+     * @return array
+     */
+    private function validationRules(): array
+    {
+        return [
+            'grade_id' => 'required|exists:grades,id',
+            'amount' => 'required|numeric|min:0',
+            'term' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^TERM (ONE|TWO|THREE) \d{4}$/',
+                function ($attribute, $value, $fail) {
+                    if (!in_array($value, self::ALLOWED_TERMS)) {
+                        $fail('The term must be exactly: ' . implode(', ', self::ALLOWED_TERMS) . ' (uppercase required).');
+                    }
+                },
+            ],
+            'due_date' => 'required|date',
+        ];
     }
 }
