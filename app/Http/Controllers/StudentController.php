@@ -12,21 +12,37 @@ use Illuminate\Http\Request;
 
 class StudentController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $currentYear = SystemSetting::currentAcademicYear();
-        $grades = Grade::withCount(['students' => function ($query) {
-            $query->active()->currentYear();
-        }])->orderBy('level')->get();
+        $query = Student::with(['grade', 'guardian']);
 
-        $stats = $this->progressionService->getPromotionStats($currentYear);
+        // Filter by grade
+        if ($request->filled('grade') && $request->grade !== 'all') {
+            $query->where('grade_id', $request->grade);
+        }
 
-        return Inertia::render('StudentProgression/Index', [
+        // Filter by status
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('adm_no', 'like', "%{$search}%")
+                    ->orWhere('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%");
+            });
+        }
+
+        $students = $query->latest()->get();
+        $grades = Grade::all();
+
+        return Inertia::render('Students/Index', [
+            'students' => $students,
             'grades' => $grades,
-            'currentYear' => $currentYear,
-            'stats' => $stats,
-            'maxGradeLevel' => SystemSetting::maxGradeLevel(),
-            'autoGraduateEnabled' => SystemSetting::isAutoGraduateEnabled(),
+            'filters' => $request->only(['grade', 'status', 'search']),
         ]);
     }
 
