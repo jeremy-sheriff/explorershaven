@@ -251,7 +251,7 @@ const totalActiveStudents = computed(() => {
                     <TrendingUp class="h-4 w-4" />
                     Promote by Grade
                 </Button>
-                <Button @click="openDemoteGrade = true" variant="outline" class="gap-2">
+                <Button @click="openDemoteGrade = true" variant="destructive" class="gap-2">
                     <TrendingDown class="h-4 w-4" />
                     Demote by Grade
                 </Button>
@@ -304,15 +304,15 @@ const totalActiveStudents = computed(() => {
                                     <div class="flex items-center justify-end gap-2">
                                         <Button
                                             v-if="grade.students_count > 0"
-                                            variant="ghost"
+                                            variant="default"
                                             size="sm"
                                             @click="promoteGradeForm.from_grade_id = String(grade.id); openPromoteGrade = true"
                                         >
                                             Promote
                                         </Button>
                                         <Button
-                                            v-if="grade.students_count > 0"
-                                            variant="ghost"
+                                            v-if="grade.students_count > 0 && grade.level > 0"
+                                            variant="destructive"
                                             size="sm"
                                             @click="demoteGradeForm.from_grade_id = String(grade.id); openDemoteGrade = true"
                                         >
