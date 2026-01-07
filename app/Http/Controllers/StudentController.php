@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 
 class StudentController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): \Inertia\Response
     {
         $query = Student::with(['grade', 'guardian']);
 
@@ -37,7 +37,7 @@ class StudentController extends Controller
         }
 
         $students = $query->latest()->get();
-        $grades = Grade::all();
+        $grades = Grade::query()->orderBy('level')->get();
 
         return Inertia::render('Students/Index', [
             'students' => $students,

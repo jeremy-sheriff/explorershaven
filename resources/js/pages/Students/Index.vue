@@ -79,7 +79,7 @@ const props = defineProps<{
 }>();
 
 const studentsList = props.students || [];
-const gradesList = props.grades || [];
+const gradesList = (props.grades || []).filter(grade => grade && grade.id);
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -407,7 +407,7 @@ const formatDate = (date: string) => {
                                     <SelectValue placeholder="Select a grade" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem v-for="grade in gradesList" :key="grade.id" :value="grade.id.toString()">
+                                    <SelectItem v-for="grade in gradesList" :key="grade.id" :value="String(grade.id)">
                                         {{ grade.name }}
                                     </SelectItem>
                                 </SelectContent>

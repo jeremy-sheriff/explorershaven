@@ -22,12 +22,12 @@ class StudentProgressionController extends Controller
     /**
      * Display the student progression management page
      */
-    public function index()
+    public function index(): \Inertia\Response
     {
         $currentYear = SystemSetting::currentAcademicYear();
-        $grades = Grade::withCount(['students' => function ($query) {
+        $grades = Grade::query()->withCount(['students' => function ($query) {
             $query->active()->currentYear();
-        }])->orderBy('id')->get();
+        }])->orderBy('level')->get();
 
         $stats = $this->progressionService->getPromotionStats($currentYear);
 
