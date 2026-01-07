@@ -29,7 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ref, computed } from 'vue';
-import { GraduationCap, Users, TrendingUp, AlertCircle, Settings } from 'lucide-vue-next';
+import { GraduationCap, Users, TrendingUp, AlertCircle, Settings, TrendingDown } from 'lucide-vue-next';
 
 const props = defineProps<{
     grades?: any[];
@@ -39,11 +39,12 @@ const props = defineProps<{
     autoGraduateEnabled?: boolean;
 }>();
 
-const gradesList = props.grades || [];
+const gradesList = (props.grades || []).filter(grade => grade && grade.id);
 const currentYear = props.currentYear || '2025';
 const stats = props.stats || {};
 
 const openPromoteGrade = ref(false);
+const openDemoteGrade = ref(false);
 const openPromoteAll = ref(false);
 const openStartNewYear = ref(false);
 const openSettings = ref(false);
@@ -61,6 +62,13 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 // Promote Grade Form
 const promoteGradeForm = useForm({
+    from_grade_id: '',
+    to_grade_id: '',
+    notes: '',
+});
+
+// Demote Grade Form
+const demoteGradeForm = useForm({
     from_grade_id: '',
     to_grade_id: '',
     notes: '',
@@ -87,6 +95,10 @@ const resetPromoteGradeForm = () => {
     promoteGradeForm.reset();
 };
 
+const resetDemoteGradeForm = () => {
+    demoteGradeForm.reset();
+};
+
 const resetPromoteAllForm = () => {
     promoteAllForm.reset();
 };
@@ -107,6 +119,19 @@ const handlePromoteGrade = () => {
         onSuccess: () => {
             openPromoteGrade.value = false;
             resetPromoteGradeForm();
+        },
+    });
+};
+
+const handleDemoteGrade = () => {
+    if (!confirm('Are you sure you want to demote all students in this grade?')) {
+        return;
+    }
+
+    demoteGradeForm.post('/student-progression/demote-grade', {
+        onSuccess: () => {
+            openDemoteGrade.value = false;
+            resetDemoteGradeForm();
         },
     });
 };
@@ -148,11 +173,21 @@ const handleUpdateSettings = () => {
 const filteredToGrades = computed(() => {
     if (!promoteGradeForm.from_grade_id) return gradesList;
 
-    const fromGrade = gradesList.find(g => g.id.toString() === promoteGradeForm.from_grade_id);
+    const fromGrade = gradesList.find(g => String(g.id) === promoteGradeForm.from_grade_id);
     if (!fromGrade) return gradesList;
 
     // Filter by level instead of ID
     return gradesList.filter(g => g.level > fromGrade.level);
+});
+
+const filteredDemoteToGrades = computed(() => {
+    if (!demoteGradeForm.from_grade_id) return gradesList;
+
+    const fromGrade = gradesList.find(g => String(g.id) === demoteGradeForm.from_grade_id);
+    if (!fromGrade) return gradesList;
+
+    // Filter grades with lower level for demotion
+    return gradesList.filter(g => g.level < fromGrade.level);
 });
 
 const getNextYear = () => {
@@ -216,6 +251,10 @@ const totalActiveStudents = computed(() => {
                     <TrendingUp class="h-4 w-4" />
                     Promote by Grade
                 </Button>
+                <Button @click="openDemoteGrade = true" variant="outline" class="gap-2">
+                    <TrendingDown class="h-4 w-4" />
+                    Demote by Grade
+                </Button>
                 <Button @click="openPromoteAll = true" variant="default" class="gap-2">
                     <Users class="h-4 w-4" />
                     Promote All Students
@@ -254,22 +293,32 @@ const totalActiveStudents = computed(() => {
                                     {{ grade.students_count || 0 }} students
                                 </td>
                                 <td class="whitespace-nowrap px-6 py-4 text-sm">
-                                        <span v-if="grade.id >= maxGradeLevel" class="rounded-full bg-purple-100 px-2 py-1 text-xs font-medium text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                                            Final Grade
-                                        </span>
+                                    <span v-if="grade.level >= maxGradeLevel" class="rounded-full bg-purple-100 px-2 py-1 text-xs font-medium text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                                        Final Grade
+                                    </span>
                                     <span v-else class="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
-                                            Active
-                                        </span>
+                                        Active
+                                    </span>
                                 </td>
                                 <td class="whitespace-nowrap px-6 py-4 text-right">
-                                    <Button
-                                        v-if="grade.students_count > 0"
-                                        variant="ghost"
-                                        size="sm"
-                                        @click="promoteGradeForm.from_grade_id = grade.id.toString(); openPromoteGrade = true"
-                                    >
-                                        Promote Grade
-                                    </Button>
+                                    <div class="flex items-center justify-end gap-2">
+                                        <Button
+                                            v-if="grade.students_count > 0"
+                                            variant="ghost"
+                                            size="sm"
+                                            @click="promoteGradeForm.from_grade_id = String(grade.id); openPromoteGrade = true"
+                                        >
+                                            Promote
+                                        </Button>
+                                        <Button
+                                            v-if="grade.students_count > 0"
+                                            variant="ghost"
+                                            size="sm"
+                                            @click="demoteGradeForm.from_grade_id = String(grade.id); openDemoteGrade = true"
+                                        >
+                                            Demote
+                                        </Button>
+                                    </div>
                                 </td>
                             </tr>
                             </tbody>
@@ -307,7 +356,7 @@ const totalActiveStudents = computed(() => {
                                 <SelectValue placeholder="Select grade to promote from" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem v-for="grade in gradesList" :key="grade.id" :value="grade.id.toString()">
+                                <SelectItem v-for="grade in gradesList" :key="grade.id" :value="String(grade.id)">
                                     {{ grade.name }} ({{ grade.students_count || 0 }} students)
                                 </SelectItem>
                             </SelectContent>
@@ -325,13 +374,16 @@ const totalActiveStudents = computed(() => {
                                 <SelectValue placeholder="Select target grade" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem v-for="grade in filteredToGrades" :key="grade.id" :value="grade.id.toString()">
+                                <SelectItem v-for="grade in filteredToGrades" :key="grade.id" :value="String(grade.id)">
                                     {{ grade.name }}
                                 </SelectItem>
                             </SelectContent>
                         </Select>
                         <span v-if="!promoteGradeForm.from_grade_id" class="text-xs text-muted-foreground">
                             Select a grade first
+                        </span>
+                        <span v-if="filteredToGrades.length === 0 && promoteGradeForm.from_grade_id" class="text-xs text-orange-600">
+                            No higher grades available. Students may need to graduate.
                         </span>
                         <span v-if="promoteGradeForm.errors.to_grade_id" class="text-sm text-red-600">
                             {{ promoteGradeForm.errors.to_grade_id }}
@@ -371,6 +423,103 @@ const totalActiveStudents = computed(() => {
                         :disabled="promoteGradeForm.processing"
                     >
                         {{ promoteGradeForm.processing ? 'Promoting...' : 'Promote Grade' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Demote Grade Modal -->
+        <Dialog v-model:open="openDemoteGrade">
+            <DialogContent
+                class="sm:max-w-2xl"
+                @interact-outside="(e) => e.preventDefault()"
+                @escape-key-down="(e) => e.preventDefault()"
+            >
+                <DialogHeader>
+                    <DialogTitle>Demote Students by Grade</DialogTitle>
+                    <DialogDescription>
+                        Select a grade to demote all students to a lower grade level.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div class="grid gap-4 py-4">
+                    <!-- From Grade -->
+                    <div class="grid gap-2">
+                        <Label for="demote_from_grade_id">From Grade</Label>
+                        <Select v-model="demoteGradeForm.from_grade_id">
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select grade to demote from" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem v-for="grade in gradesList" :key="grade.id" :value="String(grade.id)">
+                                    {{ grade.name }} ({{ grade.students_count || 0 }} students)
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <span v-if="demoteGradeForm.errors.from_grade_id" class="text-sm text-red-600">
+                            {{ demoteGradeForm.errors.from_grade_id }}
+                        </span>
+                    </div>
+
+                    <!-- To Grade -->
+                    <div class="grid gap-2">
+                        <Label for="demote_to_grade_id">To Grade</Label>
+                        <Select v-model="demoteGradeForm.to_grade_id" :disabled="!demoteGradeForm.from_grade_id">
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select target grade" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem v-for="grade in filteredDemoteToGrades" :key="grade.id" :value="String(grade.id)">
+                                    {{ grade.name }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <span v-if="!demoteGradeForm.from_grade_id" class="text-xs text-muted-foreground">
+                            Select a grade first
+                        </span>
+                        <span v-if="filteredDemoteToGrades.length === 0 && demoteGradeForm.from_grade_id" class="text-xs text-orange-600">
+                            No lower grades available for demotion.
+                        </span>
+                        <span v-if="demoteGradeForm.errors.to_grade_id" class="text-sm text-red-600">
+                            {{ demoteGradeForm.errors.to_grade_id }}
+                        </span>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="grid gap-2">
+                        <Label for="demote_notes">Notes (Optional)</Label>
+                        <Textarea
+                            id="demote_notes"
+                            v-model="demoteGradeForm.notes"
+                            placeholder="Add reason for demotion..."
+                            rows="3"
+                        />
+                        <span v-if="demoteGradeForm.errors.notes" class="text-sm text-red-600">
+                            {{ demoteGradeForm.errors.notes }}
+                        </span>
+                    </div>
+
+                    <Alert class="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
+                        <AlertCircle class="h-4 w-4 text-red-600" />
+                        <AlertTitle class="text-red-800 dark:text-red-200">Warning</AlertTitle>
+                        <AlertDescription class="text-red-700 dark:text-red-300">
+                            This will demote all active students in the selected grade to a lower level.
+                        </AlertDescription>
+                    </Alert>
+                </div>
+
+                <DialogFooter class="pt-4">
+                    <DialogClose as-child>
+                        <Button variant="outline" @click="resetDemoteGradeForm">
+                            Cancel
+                        </Button>
+                    </DialogClose>
+                    <Button
+                        @click="handleDemoteGrade"
+                        :disabled="demoteGradeForm.processing"
+                        variant="destructive"
+                    >
+                        {{ demoteGradeForm.processing ? 'Demoting...' : 'Demote Grade' }}
                     </Button>
                 </DialogFooter>
             </DialogContent>

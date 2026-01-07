@@ -9,6 +9,7 @@ use App\Models\SystemSetting;
 use App\Services\StudentProgressionService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class StudentProgressionController extends Controller
 {
@@ -22,7 +23,7 @@ class StudentProgressionController extends Controller
     /**
      * Display the student progression management page
      */
-    public function index(): \Inertia\Response
+    public function index(): Response
     {
         $currentYear = SystemSetting::currentAcademicYear();
         $grades = Grade::query()->withCount(['students' => function ($query) {
@@ -196,6 +197,53 @@ class StudentProgressionController extends Controller
             return redirect()->back()->with('success', 'Settings updated successfully.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Failed to update settings: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Demote a single student
+     */
+    public function demoteStudent(Request $request, Student $student)
+    {
+        $validated = $request->validate([
+            'to_grade_id' => 'required|exists:grades,id',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $this->progressionService->demoteStudent(
+                $student,
+                $validated['to_grade_id'],
+                $validated['notes'] ?? null
+            );
+
+            return redirect()->back()->with('success', 'Student demoted successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Failed to demote student: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Demote all students in a specific grade
+     */
+    public function demoteGrade(Request $request)
+    {
+        $validated = $request->validate([
+            'from_grade_id' => 'required|exists:grades,id',
+            'to_grade_id' => 'required|exists:grades,id',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $progressions = $this->progressionService->demoteGrade(
+                $validated['from_grade_id'],
+                $validated['to_grade_id'],
+                $validated['notes'] ?? null
+            );
+
+            return redirect()->back()->with('success', "Successfully demoted {$progressions->count()} students.");
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Failed to demote grade: ' . $e->getMessage());
         }
     }
 }

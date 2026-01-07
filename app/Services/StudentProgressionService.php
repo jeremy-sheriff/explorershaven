@@ -231,4 +231,79 @@ class StudentProgressionService
                 }),
         ];
     }
+
+    /**
+     * Demote a single student to a lower grade
+     */
+    public function demoteStudent(
+        Student $student,
+        int $toGradeId,
+        ?string $notes = null,
+        ?int $processedBy = null
+    ): StudentProgression {
+        return DB::transaction(function () use ($student, $toGradeId, $notes, $processedBy) {
+            $fromGradeId = $student->grade_id;
+            $currentYear = SystemSetting::currentAcademicYear();
+
+            // Validate that target grade is lower than current grade
+            $fromGrade = Grade::find($fromGradeId);
+            $toGrade = Grade::find($toGradeId);
+
+            if ($toGrade->level >= $fromGrade->level) {
+                throw new \Exception('Target grade must be lower than current grade for demotion.');
+            }
+
+            // Create progression record
+            $progression = StudentProgression::create([
+                'student_id' => $student->id,
+                'from_grade_id' => $fromGradeId,
+                'to_grade_id' => $toGradeId,
+                'academic_year' => $currentYear,
+                'progression_type' => 'demotion',
+                'notes' => $notes,
+                'processed_by' => $processedBy ?? auth()->id(),
+                'processed_at' => now(),
+            ]);
+
+            // Update student's grade
+            $student->update([
+                'grade_id' => $toGradeId,
+            ]);
+
+            return $progression;
+        });
+    }
+
+    /**
+     * Demote all students in a specific grade to a lower grade
+     */
+    public function demoteGrade(
+        int $fromGradeId,
+        int $toGradeId,
+        ?string $notes = null,
+        ?int $processedBy = null
+    ): Collection {
+        // Validate grades
+        $fromGrade = Grade::find($fromGradeId);
+        $toGrade = Grade::find($toGradeId);
+
+        if ($toGrade->level >= $fromGrade->level) {
+            throw new \Exception('Target grade must be lower than current grade for demotion.');
+        }
+
+        $students = Student::active()
+            ->currentYear()
+            ->where('grade_id', $fromGradeId)
+            ->get();
+
+        $progressions = collect();
+
+        foreach ($students as $student) {
+            $progressions->push(
+                $this->demoteStudent($student, $toGradeId, $notes, $processedBy)
+            );
+        }
+
+        return $progressions;
+    }
 }

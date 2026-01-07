@@ -40,6 +40,8 @@ Route::get('/student-progression/history', [StudentProgressionController::class,
 Route::post('/student-progression/promote-student/{student}', [StudentProgressionController::class, 'promoteStudent'])->name('student-progression.promote-student');
 Route::post('/student-progression/promote-grade', [StudentProgressionController::class, 'promoteGrade'])->name('student-progression.promote-grade');
 Route::post('/student-progression/promote-all', [StudentProgressionController::class, 'promoteAll'])->name('student-progression.promote-all');
+Route::post('/student-progression/demote-student/{student}', [StudentProgressionController::class, 'demoteStudent'])->name('student-progression.demote-student');
+Route::post('/student-progression/demote-grade', [StudentProgressionController::class, 'demoteGrade'])->name('student-progression.demote-grade');
 Route::post('/student-progression/start-new-year', [StudentProgressionController::class, 'startNewYear'])->name('student-progression.start-new-year');
 Route::post('/student-progression/graduate-student/{student}', [StudentProgressionController::class, 'graduateStudent'])->name('student-progression.graduate-student');
 Route::put('/student-progression/settings', [StudentProgressionController::class, 'updateSettings'])->name('student-progression.update-settings');
