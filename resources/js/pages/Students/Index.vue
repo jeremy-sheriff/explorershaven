@@ -4,6 +4,9 @@ import { dashboard } from '@/routes';
 import students from '@/routes/students';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/vue3';
+import { Edit } from 'lucide-vue-next'
+import { DeleteIcon } from 'lucide-vue-next'
+import { EyeIcon } from 'lucide-vue-next'
 import {
     Table,
     TableBody,
@@ -279,6 +282,7 @@ const formatDate = (date: string) => {
                                             size="sm"
                                             @click="handleView(student.id)"
                                         >
+                                            <EyeIcon/>
                                             View
                                         </Button>
 
@@ -287,6 +291,7 @@ const formatDate = (date: string) => {
                                             size="sm"
                                             @click="handleEdit(student.id)"
                                         >
+                                            <Edit />
                                             Edit
                                         </Button>
 
@@ -295,6 +300,7 @@ const formatDate = (date: string) => {
                                             size="sm"
                                             @click="handleDelete(student.id)"
                                         >
+                                            <DeleteIcon />
                                             Delete
                                         </Button>
                                     </div>
