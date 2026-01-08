@@ -145,14 +145,14 @@ defineProps<{
                         </Button>
                     </div>
 
-                    <div class="form-footer" v-if="canRegister">
-                        <p class="footer-text">
-                            Don't have an account?
-                            <TextLink :href="register()" :tabindex="5" class="signup-link">
-                                Create account
-                            </TextLink>
-                        </p>
-                    </div>
+<!--                    <div class="form-footer" v-if="canRegister">-->
+<!--                        <p class="footer-text">-->
+<!--                            Don't have an account?-->
+<!--                            <TextLink :href="register()" :tabindex="5" class="signup-link">-->
+<!--                                Create account-->
+<!--                            </TextLink>-->
+<!--                        </p>-->
+<!--                    </div>-->
                 </Form>
             </div>
 
