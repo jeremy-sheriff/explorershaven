@@ -28,10 +28,10 @@ class DatabaseSeeder extends Seeder
             ]);
 //        Grade::query()->truncatdre();
         $this->call([
-            GradeSeeder::class,
-            GuardianSeeder::class,
-            StudentSeeder::class,
-            FeeSeeder::class,
+//            GradeSeeder::class,
+//            GuardianSeeder::class,
+//            StudentSeeder::class,
+//            FeeSeeder::class,
 //            FeePaymentSeeder::class,
         ]);
     }
