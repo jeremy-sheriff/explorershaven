@@ -121,7 +121,7 @@ const totalCredits = creditList.reduce((sum, credit) => sum + parseFloat(credit.
 </script>
 
 <template>
-    <Head title="Fee Credits" />
+    <Head title="Fee Credits (Overpayments)" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
