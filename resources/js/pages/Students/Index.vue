@@ -249,8 +249,9 @@ const formatDate = (date: string) => {
                                 <TableHead>#</TableHead>
                                 <TableHead>Adm No</TableHead>
                                 <TableHead>Name</TableHead>
+                                <TableHead>Academic year</TableHead>
                                 <TableHead>Grade</TableHead>
-                                <TableHead>Guardian</TableHead>
+                                <TableHead>Graduation Status</TableHead>
                                 <TableHead>Phone</TableHead>
                                 <TableHead class="text-right">Actions</TableHead>
                             </TableRow>
@@ -267,10 +268,14 @@ const formatDate = (date: string) => {
                                     {{ student.first_name }} {{ student.middle_name }} {{ student.last_name }}
                                 </TableCell>
                                 <TableCell>
-                                    {{ student.grade?.name || 'N/A' }}
+                                    {{student.academic_year}}
                                 </TableCell>
                                 <TableCell>
-                                    {{ student.guardian?.first_name || '' }} {{ student.guardian?.last_name || '' }}
+                                    {{ student.grade?.name || 'N/A' }}
+                                </TableCell>
+
+                                <TableCell>
+                                    {{student.status}}
                                 </TableCell>
                                 <TableCell>
                                     {{ student.guardian?.phone_number || 'N/A' }}
