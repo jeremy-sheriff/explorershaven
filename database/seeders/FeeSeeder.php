@@ -24,7 +24,6 @@ class FeeSeeder extends Seeder
             ['grade_id' => 3, 'amount' => 17000, 'term' => 'Term 2 2025', 'due_date' => '2025-05-31', 'created_at' => now(), 'updated_at' => now()],
             ['grade_id' => 4, 'amount' => 18000, 'term' => 'Term 2 2025', 'due_date' => '2025-05-31', 'created_at' => now(), 'updated_at' => now()],
 
-
             // Term 3 2025 - All grades
             ['grade_id' => 1, 'amount' => 15000, 'term' => 'Term 3 2025', 'due_date' => '2025-09-30', 'created_at' => now(), 'updated_at' => now()],
             ['grade_id' => 2, 'amount' => 16000, 'term' => 'Term 3 2025', 'due_date' => '2025-09-30', 'created_at' => now(), 'updated_at' => now()],
