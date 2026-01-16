@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('last_name');
             $table->foreignId('guardian_id')->constrained()->cascadeOnDelete();
             $table->foreignId('grade_id')->constrained()->cascadeOnDelete();
-            $table->string('academic_year')->default('2025');
+            $table->string('academic_year');
             $table->enum('status', ['active', 'graduated', 'transferred', 'withdrawn'])->default('active');
             $table->date('enrollment_date')->nullable();
             $table->date('graduation_date')->nullable();

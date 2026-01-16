@@ -1,9 +1,8 @@
 version: '3.8'
-
 services:
   mysql:
     image: mysql:8.0
-    container_name: school_app_db
+    container_name: school_app_db_container
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: q8wKV5987jVFoD
@@ -11,7 +10,7 @@ services:
       MYSQL_USER: school_admin
       MYSQL_PASSWORD: yTWv6Fn4R4jaNy
     ports:
-      - "3306:3306"
+      - "3308:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
