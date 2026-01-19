@@ -9,7 +9,7 @@ use App\Models\Guardian;
 use App\Models\SystemSetting;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
-use Spatie\LaravelPdf\Facades\Pdf;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class StudentController extends Controller
 {
@@ -266,8 +266,9 @@ class StudentController extends Controller
             'title' => 'Students Report'
         ];
 
-        return Pdf::view('pdf.students', $data)
-            ->format('a4')
-            ->name('students-report-' . now()->format('Y-m-d') . '.pdf');
+        $pdf = Pdf::loadView('pdf.students', $data);
+        $pdf->setPaper('a4', 'portrait');
+
+        return $pdf->download('students-report-' . now()->format('Y-m-d') . '.pdf');
     }
 }
