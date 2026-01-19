@@ -9,6 +9,7 @@ use App\Models\Guardian;
 use App\Models\SystemSetting;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
+use Spatie\LaravelPdf\Facades\Pdf;
 
 class StudentController extends Controller
 {
@@ -19,6 +20,11 @@ class StudentController extends Controller
         // Filter by grade
         if ($request->filled('grade') && $request->grade !== 'all') {
             $query->where('grade_id', $request->grade);
+        }
+
+        // Filter by academic year
+        if ($request->filled('academic_year') && $request->academic_year !== 'all') {
+            $query->where('academic_year', $request->academic_year);
         }
 
         // Filter by status
@@ -39,10 +45,19 @@ class StudentController extends Controller
         $students = $query->latest()->get();
         $grades = Grade::query()->orderBy('level')->get();
 
+        // Get distinct academic years from students
+        $academicYears = Student::query()
+            ->distinct()
+            ->pluck('academic_year')
+            ->filter()
+            ->sort()
+            ->values();
+
         return Inertia::render('Students/Index', [
             'students' => $students,
             'grades' => $grades,
-            'filters' => $request->only(['grade', 'status', 'search']),
+            'academicYears' => $academicYears,
+            'filters' => $request->only(['grade', 'academic_year', 'status', 'search']),
         ]);
     }
 
@@ -53,10 +68,12 @@ class StudentController extends Controller
             'first_name' => 'required|string',
             'middle_name' => 'nullable|string',
             'last_name' => 'required|string',
+            'gender' => 'required|in:male,female',
             'grade_id' => 'required|exists:grades,id',
             'guardian_first_name' => 'required|string',
             'guardian_last_name' => 'required|string',
             'guardian_phone' => 'required|string',
+            'guardian_gender' => 'required|in:male,female',
         ]);
 
         // Create or find guardian
@@ -66,7 +83,17 @@ class StudentController extends Controller
             'first_name' => $validated['guardian_first_name'],
             'middle_name' => '',
             'last_name' => $validated['guardian_last_name'],
+            'gender' => $validated['guardian_gender'],
         ]);
+
+        // If guardian exists, update their info
+        if (!$guardian->wasRecentlyCreated) {
+            $guardian->update([
+                'first_name' => $validated['guardian_first_name'],
+                'last_name' => $validated['guardian_last_name'],
+                'gender' => $validated['guardian_gender'],
+            ]);
+        }
 
         // Create student
         Student::create([
@@ -74,13 +101,13 @@ class StudentController extends Controller
             'first_name' => $validated['first_name'],
             'middle_name' => $validated['middle_name'],
             'last_name' => $validated['last_name'],
+            'gender' => $validated['gender'],
             'grade_id' => $validated['grade_id'],
             'guardian_id' => $guardian->id,
         ]);
 
-        return redirect()->route('students.index'); // Changed this line
+        return redirect()->route('students.index');
     }
-
 
     public function show(Student $student)
     {
@@ -141,7 +168,6 @@ class StudentController extends Controller
         ]);
     }
 
-
     public function update(Request $request, Student $student)
     {
         $validated = $request->validate([
@@ -149,10 +175,12 @@ class StudentController extends Controller
             'first_name' => 'required|string',
             'middle_name' => 'nullable|string',
             'last_name' => 'required|string',
+            'gender' => 'required|in:male,female',
             'grade_id' => 'required|exists:grades,id',
             'guardian_first_name' => 'required|string',
             'guardian_last_name' => 'required|string',
             'guardian_phone' => 'required|string',
+            'guardian_gender' => 'required|in:male,female',
         ]);
 
         // Update guardian
@@ -160,6 +188,7 @@ class StudentController extends Controller
             'first_name' => $validated['guardian_first_name'],
             'last_name' => $validated['guardian_last_name'],
             'phone_number' => $validated['guardian_phone'],
+            'gender' => $validated['guardian_gender'],
         ]);
 
         // Update student
@@ -168,15 +197,77 @@ class StudentController extends Controller
             'first_name' => $validated['first_name'],
             'middle_name' => $validated['middle_name'],
             'last_name' => $validated['last_name'],
+            'gender' => $validated['gender'],
             'grade_id' => $validated['grade_id'],
         ]);
 
-        return redirect()->route('students.index'); // Changed this line
+        return redirect()->route('students.index');
     }
 
     public function destroy(Student $student)
     {
         $student->delete();
         return redirect()->back()->with('success', 'Student deleted successfully');
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $query = Student::with(['grade', 'guardian']);
+
+        // Apply same filters as index
+        if ($request->filled('grade') && $request->grade !== 'all' && $request->grade !== '') {
+            $query->where('grade_id', $request->grade);
+        }
+
+        if ($request->filled('academic_year') && $request->academic_year !== 'all' && $request->academic_year !== '') {
+            $query->where('academic_year', $request->academic_year);
+        }
+
+        if ($request->filled('status') && $request->status !== 'all' && $request->status !== '') {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('adm_no', 'like', "%{$search}%")
+                    ->orWhere('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%");
+            });
+        }
+
+        $students = $query->orderBy('adm_no')->get();
+
+        // Get filter descriptions for the report
+        $filterDescriptions = [];
+
+        if ($request->filled('grade') && $request->grade !== 'all' && $request->grade !== '') {
+            $grade = Grade::find($request->grade);
+            $filterDescriptions[] = "Grade: " . ($grade ? $grade->name : 'N/A');
+        }
+
+        if ($request->filled('academic_year') && $request->academic_year !== 'all' && $request->academic_year !== '') {
+            $filterDescriptions[] = "Academic Year: " . $request->academic_year;
+        }
+
+        if ($request->filled('status') && $request->status !== 'all' && $request->status !== '') {
+            $filterDescriptions[] = "Status: " . ucfirst($request->status);
+        }
+
+        if ($request->filled('search')) {
+            $filterDescriptions[] = "Search: " . $request->search;
+        }
+
+        $data = [
+            'students' => $students,
+            'generatedAt' => now()->format('F d, Y h:i A'),
+            'totalStudents' => $students->count(),
+            'filters' => $filterDescriptions,
+            'title' => 'Students Report'
+        ];
+
+        return Pdf::view('pdf.students', $data)
+            ->format('a4')
+            ->name('students-report-' . now()->format('Y-m-d') . '.pdf');
     }
 }

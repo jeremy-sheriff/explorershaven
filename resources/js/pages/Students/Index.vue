@@ -4,9 +4,7 @@ import { dashboard } from '@/routes';
 import students from '@/routes/students';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { Edit } from 'lucide-vue-next'
-import { DeleteIcon } from 'lucide-vue-next'
-import { EyeIcon } from 'lucide-vue-next'
+import { Edit, DeleteIcon, EyeIcon, Download, Filter, X } from 'lucide-vue-next'
 import {
     Table,
     TableBody,
@@ -49,7 +47,7 @@ import {
 import {Checkbox} from "@/components/ui/checkbox";
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import axios from 'axios';
 
 const isDesktop = useMediaQuery('(min-width: 640px)')
@@ -72,14 +70,31 @@ const selectedEditStudentId = ref<number | null>(null)
 const selectedViewStudentId = ref<number | null>(null)
 const studentDetails = ref<any>(null)
 const loadingDetails = ref(false)
+const exportingPDF = ref(false)
 
 const props = defineProps<{
     students?: any[];
     grades?: any[];
+    filters?: {
+        grade?: string;
+        academic_year?: string;
+        status?: string;
+        search?: string;
+    };
+    academicYears?: string[];
 }>();
 
 const studentsList = props.students || [];
 const gradesList = (props.grades || []).filter(grade => grade && grade.id);
+const academicYearsList = props.academicYears || [];
+
+// Filter state
+const filterForm = useForm({
+    grade: props.filters?.grade || 'all',
+    academic_year: props.filters?.academic_year || 'all',
+    status: props.filters?.status || 'all',
+    search: props.filters?.search || '',
+})
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -102,7 +117,7 @@ const studentForm = useForm({
     guardian_first_name: '',
     guardian_last_name: '',
     guardian_phone: '',
-    guardian_gender: '',  // ADD THIS
+    guardian_gender: '',
 })
 
 const editForm = useForm({
@@ -115,8 +130,82 @@ const editForm = useForm({
     guardian_first_name: '',
     guardian_last_name: '',
     guardian_phone: '',
-    guardian_gender: '',  // ADD THIS
+    guardian_gender: '',
 })
+
+// Watch for filter changes and apply them
+watch(() => [filterForm.grade, filterForm.academic_year, filterForm.status], () => {
+    applyFilters()
+}, { deep: true })
+
+// Debounced search
+let searchTimeout: any = null
+watch(() => filterForm.search, (newValue) => {
+    clearTimeout(searchTimeout)
+    searchTimeout = setTimeout(() => {
+        applyFilters()
+    }, 500)
+})
+
+const applyFilters = () => {
+    router.get('/students', {
+        grade: filterForm.grade !== 'all' ? filterForm.grade : undefined,
+        academic_year: filterForm.academic_year !== 'all' ? filterForm.academic_year : undefined,
+        status: filterForm.status !== 'all' ? filterForm.status : undefined,
+        search: filterForm.search || undefined,
+    }, {
+        preserveState: true,
+        preserveScroll: true,
+    })
+}
+
+const clearFilters = () => {
+    filterForm.grade = 'all'
+    filterForm.academic_year = 'all'
+    filterForm.status = 'all'
+    filterForm.search = ''
+    router.get('/students')
+}
+
+const hasActiveFilters = computed(() => {
+    return filterForm.grade !== 'all' ||
+        filterForm.academic_year !== 'all' ||
+        filterForm.status !== 'all' ||
+        filterForm.search !== ''
+})
+
+const exportToPDF = async () => {
+    if (exportingPDF.value) return
+
+    exportingPDF.value = true
+    try {
+        const params = new URLSearchParams({
+            grade: filterForm.grade !== 'all' ? filterForm.grade : '',
+            academic_year: filterForm.academic_year !== 'all' ? filterForm.academic_year : '',
+            status: filterForm.status !== 'all' ? filterForm.status : '',
+            search: filterForm.search || '',
+        })
+
+        const response = await axios.get(`/students/export/pdf?${params.toString()}`, {
+            responseType: 'blob'
+        })
+
+        // Create download link
+        const url = window.URL.createObjectURL(new Blob([response.data]))
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', `students-report-${new Date().toISOString().split('T')[0]}.pdf`)
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        window.URL.revokeObjectURL(url)
+    } catch (error) {
+        console.error('Error exporting PDF:', error)
+        alert('Failed to export PDF. Please try again.')
+    } finally {
+        exportingPDF.value = false
+    }
+}
 
 const resetForm = () => {
     studentForm.reset()
@@ -134,10 +223,12 @@ const handleEdit = (studentId: number) => {
         editForm.first_name = student.first_name
         editForm.middle_name = student.middle_name || ''
         editForm.last_name = student.last_name
+        editForm.gender = student.gender || ''
         editForm.grade_id = student.grade?.id?.toString() || ''
         editForm.guardian_first_name = student.guardian?.first_name || ''
         editForm.guardian_last_name = student.guardian?.last_name || ''
         editForm.guardian_phone = student.guardian?.phone_number || ''
+        editForm.guardian_gender = student.guardian?.gender || ''
 
         openEditStudent.value = true
     }
@@ -232,31 +323,145 @@ const formatDate = (date: string) => {
             <!-- Students Table -->
             <div class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 bg-white md:min-h-min dark:border-sidebar-border dark:bg-sidebar">
                 <div class="p-6">
-                    <div class="mb-4 flex items-center justify-between">
+                    <div class="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <h2 class="text-xl font-semibold">Students</h2>
-                        <button
-                            @click="handleCreate"
-                            class="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
-                        >
-                            + Add Student
-                        </button>
+                        <div class="flex flex-wrap gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                @click="exportToPDF"
+                                :disabled="exportingPDF || studentsList.length === 0"
+                                class="gap-2"
+                            >
+                                <Download class="h-4 w-4" />
+                                {{ exportingPDF ? 'Exporting...' : 'Export PDF' }}
+                            </Button>
+                            <button
+                                @click="handleCreate"
+                                class="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
+                            >
+                                + Add Student
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filters Section -->
+                    <div class="mb-4 space-y-4 rounded-lg border bg-muted/50 p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <Filter class="h-4 w-4 text-muted-foreground" />
+                                <span class="text-sm font-medium">Filters</span>
+                                <span v-if="hasActiveFilters" class="rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
+                                    Active
+                                </span>
+                            </div>
+                            <Button
+                                v-if="hasActiveFilters"
+                                variant="ghost"
+                                size="sm"
+                                @click="clearFilters"
+                                class="h-8 gap-1"
+                            >
+                                <X class="h-3 w-3" />
+                                Clear
+                            </Button>
+                        </div>
+
+                        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                            <!-- Search -->
+                            <div class="space-y-2">
+                                <Label for="search" class="text-xs">Search</Label>
+                                <Input
+                                    id="search"
+                                    v-model="filterForm.search"
+                                    placeholder="Name or Adm No..."
+                                    class="h-9"
+                                />
+                            </div>
+
+                            <!-- Grade Filter -->
+                            <div class="space-y-2">
+                                <Label for="filter_grade" class="text-xs">Grade</Label>
+                                <Select v-model="filterForm.grade">
+                                    <SelectTrigger class="h-9">
+                                        <SelectValue placeholder="All Grades" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Grades</SelectItem>
+                                        <SelectItem v-for="grade in gradesList" :key="grade.id" :value="String(grade.id)">
+                                            {{ grade.name }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <!-- Academic Year Filter -->
+                            <div class="space-y-2">
+                                <Label for="filter_year" class="text-xs">Academic Year</Label>
+                                <Select v-model="filterForm.academic_year">
+                                    <SelectTrigger class="h-9">
+                                        <SelectValue placeholder="All Years" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Years</SelectItem>
+                                        <SelectItem v-for="year in academicYearsList" :key="year" :value="year">
+                                            {{ year }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <!-- Status Filter -->
+                            <div class="space-y-2">
+                                <Label for="filter_status" class="text-xs">Status</Label>
+                                <Select v-model="filterForm.status">
+                                    <SelectTrigger class="h-9">
+                                        <SelectValue placeholder="All Status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Status</SelectItem>
+                                        <SelectItem value="active">Active</SelectItem>
+                                        <SelectItem value="graduated">Graduated</SelectItem>
+                                        <SelectItem value="transferred">Transferred</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
                     </div>
 
                     <Table>
-                        <TableCaption>A list of all students in the system.</TableCaption>
+                        <TableCaption>
+                            {{ studentsList.length }} student(s) found
+                            <template v-if="hasActiveFilters"> (filtered)</template>
+                        </TableCaption>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>#</TableHead>
                                 <TableHead>Adm No</TableHead>
                                 <TableHead>Name</TableHead>
-                                <TableHead>Academic year</TableHead>
+                                <TableHead>Academic Year</TableHead>
                                 <TableHead>Grade</TableHead>
-                                <TableHead>Graduation Status</TableHead>
+                                <TableHead>Status</TableHead>
                                 <TableHead>Phone</TableHead>
                                 <TableHead class="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
+                            <TableRow v-if="studentsList.length === 0">
+                                <TableCell colspan="8" class="h-24 text-center">
+                                    <div class="flex flex-col items-center gap-2 text-muted-foreground">
+                                        <template v-if="hasActiveFilters">
+                                            <p>No students match your filters</p>
+                                            <Button variant="link" size="sm" @click="clearFilters">
+                                                Clear filters
+                                            </Button>
+                                        </template>
+                                        <template v-else>
+                                            <p>No students found. Add your first student to get started.</p>
+                                        </template>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
                             <TableRow v-for="(student, index) in studentsList" :key="student.id" :class="['hover:bg-gray-50 dark:hover:bg-sidebar-accent', { 'bg-muted/50': index % 2 === 0 }]">
                                 <TableCell class="font-medium">
                                     {{ index + 1 }}
@@ -268,14 +473,22 @@ const formatDate = (date: string) => {
                                     {{ student.first_name }} {{ student.middle_name }} {{ student.last_name }}
                                 </TableCell>
                                 <TableCell>
-                                    {{student.academic_year}}
+                                    {{ student.academic_year }}
                                 </TableCell>
                                 <TableCell>
                                     {{ student.grade?.name || 'N/A' }}
                                 </TableCell>
-
                                 <TableCell>
-                                    {{student.status}}
+                                    <span
+                                        class="inline-flex rounded-full px-2 py-1 text-xs font-semibold"
+                                        :class="{
+                                            'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200': student.status === 'active',
+                                            'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200': student.status === 'graduated',
+                                            'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200': student.status === 'transferred'
+                                        }"
+                                    >
+                                        {{ student.status }}
+                                    </span>
                                 </TableCell>
                                 <TableCell>
                                     {{ student.guardian?.phone_number || 'N/A' }}
@@ -287,7 +500,7 @@ const formatDate = (date: string) => {
                                             size="sm"
                                             @click="handleView(student.id)"
                                         >
-                                            <EyeIcon/>
+                                            <EyeIcon class="h-4 w-4" />
                                             View
                                         </Button>
 
@@ -296,7 +509,7 @@ const formatDate = (date: string) => {
                                             size="sm"
                                             @click="handleEdit(student.id)"
                                         >
-                                            <Edit />
+                                            <Edit class="h-4 w-4" />
                                             Edit
                                         </Button>
 
@@ -305,7 +518,7 @@ const formatDate = (date: string) => {
                                             size="sm"
                                             @click="handleDelete(student.id)"
                                         >
-                                            <DeleteIcon />
+                                            <DeleteIcon class="h-4 w-4" />
                                             Delete
                                         </Button>
                                     </div>
@@ -565,22 +778,40 @@ const formatDate = (date: string) => {
                         </div>
                     </div>
 
-                    <!-- Grade -->
-                    <div class="grid gap-2">
-                        <Label for="edit_grade_id">
-                            Grade
-                        </Label>
-                        <Select v-model="editForm.grade_id">
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a grade" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem v-for="grade in gradesList" :key="grade.id" :value="grade.id.toString()">
-                                    {{ grade.name }}
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <span v-if="editForm.errors.grade_id" class="text-sm text-red-600">{{ editForm.errors.grade_id }}</span>
+                    <!-- Gender and Grade -->
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="grid gap-2">
+                            <Label for="edit_gender">
+                                Gender
+                            </Label>
+                            <Select v-model="editForm.gender">
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select gender" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="male">Male</SelectItem>
+                                    <SelectItem value="female">Female</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <span v-if="editForm.errors.gender" class="text-sm text-red-600">{{ editForm.errors.gender }}</span>
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="edit_grade_id">
+                                Grade
+                            </Label>
+                            <Select v-model="editForm.grade_id">
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a grade" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem v-for="grade in gradesList" :key="grade.id" :value="grade.id.toString()">
+                                        {{ grade.name }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <span v-if="editForm.errors.grade_id" class="text-sm text-red-600">{{ editForm.errors.grade_id }}</span>
+                        </div>
                     </div>
 
                     <!-- Guardian Information -->
@@ -611,17 +842,36 @@ const formatDate = (date: string) => {
                                     <span v-if="editForm.errors.guardian_last_name" class="text-sm text-red-600">{{ editForm.errors.guardian_last_name }}</span>
                                 </div>
                             </div>
-                            <div class="grid gap-2">
-                                <Label for="edit_guardian_phone">
-                                    Guardian Phone Number
-                                </Label>
-                                <Input
-                                    id="edit_guardian_phone"
-                                    v-model="editForm.guardian_phone"
-                                    placeholder="0712345678"
-                                    type="tel"
-                                />
-                                <span v-if="editForm.errors.guardian_phone" class="text-sm text-red-600">{{ editForm.errors.guardian_phone }}</span>
+
+                            <div class="grid gap-4 sm:grid-cols-2">
+                                <div class="grid gap-2">
+                                    <Label for="edit_guardian_gender">
+                                        Guardian Gender
+                                    </Label>
+                                    <Select v-model="editForm.guardian_gender">
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select gender" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="male">Male</SelectItem>
+                                            <SelectItem value="female">Female</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <span v-if="editForm.errors.guardian_gender" class="text-sm text-red-600">{{ editForm.errors.guardian_gender }}</span>
+                                </div>
+
+                                <div class="grid gap-2">
+                                    <Label for="edit_guardian_phone">
+                                        Guardian Phone Number
+                                    </Label>
+                                    <Input
+                                        id="edit_guardian_phone"
+                                        v-model="editForm.guardian_phone"
+                                        placeholder="0712345678"
+                                        type="tel"
+                                    />
+                                    <span v-if="editForm.errors.guardian_phone" class="text-sm text-red-600">{{ editForm.errors.guardian_phone }}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -743,8 +993,7 @@ const formatDate = (date: string) => {
                                             {{ formatCurrency(payment.amount_paid) }}
                                         </TableCell>
                                         <TableCell class="font-medium text-red-600">
-                                            {{ formatCurrency(payment.balance) }}
-                                        </TableCell>
+                                            {{ formatCurrency(payment.balance) }}</TableCell>
                                     </TableRow>
                                 </TableBody>
                             </Table>
