@@ -20,7 +20,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
           port: 21
-          server-dir: /domains/explorershaven.medicareers.co.ke/
+          server-dir: /domains/explorershaven.co.ke/
           timeout: 600000
           log-level: verbose
           exclude: |
