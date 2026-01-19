@@ -63,7 +63,7 @@ defineProps<{
         <div class="login-form-container">
             <div class="login-form-wrapper">
                 <div class="form-header">
-                    <h2 class="form-title">Welcome Back User</h2>
+                    <h2 class="form-title">Welcome Back</h2>
                     <p class="form-description">Sign in to your account to continue</p>
                 </div>
 
