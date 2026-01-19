@@ -154,8 +154,9 @@ const applyFilters = () => {
         status: filterForm.status !== 'all' ? filterForm.status : undefined,
         search: filterForm.search || undefined,
     }, {
-        preserveState: true,
+        preserveState: false,  // Changed to false
         preserveScroll: true,
+        only: ['students', 'filters'],  // Only reload these props
     })
 }
 

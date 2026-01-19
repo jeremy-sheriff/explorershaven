@@ -67,16 +67,7 @@
     <p><strong>Total Students:</strong> {{ $totalStudents }}</p>
 </div>
 
-@if(count($filters) > 0)
-    <div class="filters">
-        <strong>Applied Filters:</strong>
-        <ul style="margin: 5px 0; padding-left: 20px;">
-            @foreach($filters as $filter)
-                <li>{{ $filter }}</li>
-            @endforeach
-        </ul>
-    </div>
-@endif
+
 
 <table>
     <thead>
