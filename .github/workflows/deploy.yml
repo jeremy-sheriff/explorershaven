@@ -35,7 +35,7 @@ jobs:
       - name: Build assets
         run: npm run build
 
-      - name: Upload via FTP
+      - name: Upload build folder via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{secrets.FTP_HOST}}
@@ -43,15 +43,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
           port: 21
-          server-dir: /domains/explorershaven.co.ke/public_html/
+          local-dir: ./public/build/
+          server-dir: /domains/explorershaven.co.ke/public_html/build/
           timeout: 600000
           log-level: verbose
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-            **/tests/**
-            **/*.md
-            .env
-            .env.example
-            **/.DS_Store
