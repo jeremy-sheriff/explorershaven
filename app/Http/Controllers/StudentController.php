@@ -42,7 +42,7 @@ class StudentController extends Controller
             });
         }
 
-        $students = $query->latest()->get();
+        $students = $query->latest()->paginate(10)->withQueryString();
         $grades = Grade::query()->orderBy('level')->get();
 
         // Get distinct academic years from students
@@ -266,9 +266,8 @@ class StudentController extends Controller
             'title' => 'Students Report'
         ];
 
-        $pdf = Pdf::loadView('pdf.students', $data);
-        $pdf->setPaper('a4', 'portrait');
-
-        return $pdf->download('students-report-' . now()->format('Y-m-d') . '.pdf');
+        return Pdf::view('pdf.students', $data)
+            ->format('a4')
+            ->name('students-report-' . now()->format('Y-m-d') . '.pdf');
     }
 }

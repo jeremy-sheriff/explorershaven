@@ -84,7 +84,61 @@ const props = defineProps<{
     academicYears?: string[];
 }>();
 
-const studentsList = props.students || [];
+const getPaginationPages = () => {
+    if (!props.students) return []
+
+    const current = props.students.current_page
+    const last = props.students.last_page
+    const pages: (number | string)[] = []
+
+    if (last <= 7) {
+        // Show all pages if 7 or fewer
+        for (let i = 1; i <= last; i++) {
+            pages.push(i)
+        }
+    } else {
+        // Always show first page
+        pages.push(1)
+
+        if (current > 3) {
+            pages.push('...')
+        }
+
+        // Show pages around current
+        const start = Math.max(2, current - 1)
+        const end = Math.min(last - 1, current + 1)
+
+        for (let i = start; i <= end; i++) {
+            pages.push(i)
+        }
+
+        if (current < last - 2) {
+            pages.push('...')
+        }
+
+        // Always show last page
+        pages.push(last)
+    }
+
+    return pages
+}
+
+const goToPage = (page: number) => {
+    if (!props.students) return
+
+    const url = props.students.path + '?page=' + page
+    const params: any = { page }
+
+    // Preserve filters
+    if (filterForm.grade !== 'all') params.grade = filterForm.grade
+    if (filterForm.academic_year !== 'all') params.academic_year = filterForm.academic_year
+    if (filterForm.status !== 'all') params.status = filterForm.status
+    if (filterForm.search) params.search = filterForm.search
+
+    router.get(url, params, { preserveState: true, preserveScroll: true })
+}
+
+const studentsList = props.students?.data || [];
 const gradesList = (props.grades || []).filter(grade => grade && grade.id);
 const academicYearsList = props.academicYears || [];
 
@@ -154,9 +208,8 @@ const applyFilters = () => {
         status: filterForm.status !== 'all' ? filterForm.status : undefined,
         search: filterForm.search || undefined,
     }, {
-        preserveState: false,  // Changed to false
+        preserveState: true,
         preserveScroll: true,
-        only: ['students', 'filters'],  // Only reload these props
     })
 }
 
@@ -527,6 +580,90 @@ const formatDate = (date: string) => {
                             </TableRow>
                         </TableBody>
                     </Table>
+
+
+                    <!-- Pagination -->
+                    <div v-if="props.students && props.students.last_page > 1" class="mt-6 flex flex-col gap-4 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+                        <!-- Results info -->
+                        <div class="text-sm text-muted-foreground">
+                            Showing
+                            <span class="font-medium text-foreground">{{ props.students.from }}</span>
+                            to
+                            <span class="font-medium text-foreground">{{ props.students.to }}</span>
+                            of
+                            <span class="font-medium text-foreground">{{ props.students.total }}</span>
+                            results
+                        </div>
+
+                        <!-- Pagination controls -->
+                        <div class="flex items-center gap-2">
+                            <!-- First page -->
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                :disabled="props.students.current_page === 1"
+                                @click="() => goToPage(1)"
+                            >
+                                First
+                            </Button>
+
+                            <!-- Previous page -->
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                :disabled="!props.students.prev_page_url"
+                                @click="() => router.get(props.students.prev_page_url, {}, { preserveState: true, preserveScroll: true })"
+                            >
+                                Previous
+                            </Button>
+
+                            <!-- Page numbers -->
+                            <div class="hidden items-center gap-1 sm:flex">
+                                <template v-for="page in getPaginationPages()" :key="page">
+                                    <Button
+                                        v-if="page !== '...'"
+                                        variant="outline"
+                                        size="sm"
+                                        :class="{ 'bg-primary text-primary-foreground': page === props.students.current_page }"
+                                        @click="() => goToPage(page)"
+                                    >
+                                        {{ page }}
+                                    </Button>
+                                    <span v-else class="px-2 text-muted-foreground">...</span>
+                                </template>
+                            </div>
+
+                            <!-- Current page indicator (mobile) -->
+                            <div class="flex items-center gap-2 sm:hidden">
+            <span class="text-sm text-muted-foreground">
+                Page {{ props.students.current_page }} of {{ props.students.last_page }}
+            </span>
+                            </div>
+
+                            <!-- Next page -->
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                :disabled="!props.students.next_page_url"
+                                @click="() => router.get(props.students.next_page_url, {}, { preserveState: true, preserveScroll: true })"
+                            >
+                                Next
+                            </Button>
+
+                            <!-- Last page -->
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                :disabled="props.students.current_page === props.students.last_page"
+                                @click="() => goToPage(props.students.last_page)"
+                            >
+                                Last
+                            </Button>
+                        </div>
+                    </div>np
+
+
+
                 </div>
             </div>
         </div>

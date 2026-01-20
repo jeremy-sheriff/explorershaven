@@ -44,6 +44,6 @@ jobs:
           protocol: ftps
           port: 21
           local-dir: ./public/build/
-          server-dir: /domains/explorershaven.co.ke/public_html/build/
+          server-dir: /domains/app.explorershaven.co.ke/public_html/build/
           timeout: 600000
           log-level: verbose
