@@ -48,6 +48,7 @@ jobs:
           log-level: verbose
           exclude: |
             **/.git*
+            **/vendor*
             **/.git*/**
             **/node_modules/**
             **/tests/**
