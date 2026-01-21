@@ -236,7 +236,12 @@ class StudentController extends Controller
             });
         }
 
-        $students = $query->orderBy('adm_no')->get();
+        // Order by grade (descending) then admission number
+        $students = $query->join('grades', 'students.grade_id', '=', 'grades.id')
+            ->orderBy('grades.level')
+            ->orderBy('students.adm_no')
+            ->select('students.*')
+            ->get();
 
         // Get filter descriptions for the report
         $filterDescriptions = [];
@@ -266,8 +271,9 @@ class StudentController extends Controller
             'title' => 'Students Report'
         ];
 
-        return Pdf::view('pdf.students', $data)
-            ->format('a4')
-            ->name('students-report-' . now()->format('Y-m-d') . '.pdf');
+        $pdf = Pdf::loadView('pdf.students', $data);
+
+        return $pdf->setPaper('a4')
+            ->download('students-report-' . now()->format('Y-m-d') . '.pdf');
     }
 }
