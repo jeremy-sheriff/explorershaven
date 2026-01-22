@@ -76,7 +76,6 @@
         <th>Adm No</th>
         <th>Name</th>
         <th>Grade</th>
-        <th>Gender</th>
         <th>Guardian</th>
         <th>Phone</th>
     </tr>
@@ -88,7 +87,6 @@
             <td>{{ $student->adm_no }}</td>
             <td>{{ $student->first_name }} {{ $student->middle_name }} {{ $student->last_name }}</td>
             <td>{{ $student->grade->name ?? 'N/A' }}</td>
-            <td>{{ ucfirst($student->gender) }}</td>
             <td>{{ $student->guardian->first_name ?? '' }} {{ $student->guardian->last_name ?? '' }}</td>
             <td>{{ $student->guardian->phone_number ?? 'N/A' }}</td>
         </tr>
