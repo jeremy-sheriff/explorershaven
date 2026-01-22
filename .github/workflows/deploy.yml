@@ -1,7 +1,7 @@
 name: Deploy School app on Explorers Haven domain
 on:
   push:
-    branches: [master]
+    branches: [main]
 
 jobs:
   deploy:
