@@ -243,6 +243,7 @@ class StudentController extends Controller
             ->select('students.*')
             ->get();
 
+
         // Get filter descriptions for the report
         $filterDescriptions = [];
 
