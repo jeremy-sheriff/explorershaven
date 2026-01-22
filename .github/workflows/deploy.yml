@@ -1,9 +1,8 @@
-name: Deploy School app on MediCareer domain
-
+name: Deploy Digital art dental on MediCareer domain
 on:
   push:
-    branches: [main]
-
+    branches: [master]
+#    comment
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -12,28 +11,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'  # Changed to 8.3
-          extensions: mbstring, xml, ctype, json, bcmath, pdo, mysql
-          coverage: none
-
-      - name: Install Composer dependencies
-        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install NPM dependencies
-        run: npm ci
-
-      - name: Build assets
-        run: npm run build
 
       - name: Upload via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -48,11 +25,9 @@ jobs:
           log-level: verbose
           exclude: |
             **/.git*
-            **/vendor/**
             **/.git*/**
             **/node_modules/**
+            **/vendor/**
             **/tests/**
             **/*.md
             .env
-            .env.example
-            **/.DS_Store
