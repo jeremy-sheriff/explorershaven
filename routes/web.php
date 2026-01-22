@@ -12,6 +12,7 @@ Route::get('/', function () {
     return redirect('/login');
 })->name('home');
 
+
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
 // Students routes - IMPORTANT: GET routes must come before PUT/DELETE routes
