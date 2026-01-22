@@ -42,7 +42,7 @@ class StudentController extends Controller
             });
         }
 
-        $students = $query->latest()->paginate(10)->withQueryString();
+        $students = $query->latest()->paginate(200)->withQueryString();
         $grades = Grade::query()->orderBy('level')->get();
 
         // Get distinct academic years from students
