@@ -277,4 +277,55 @@ class StudentController extends Controller
         return $pdf->setPaper('a4')
             ->download('students-report-' . now()->format('Y-m-d') . '.pdf');
     }
+
+
+    public function balanceReport(Request $request)
+    {
+        $query = Student::with('grade')->active();
+
+        if ($request->filled('grade_id')) {
+            $query->where('grade_id', $request->grade_id);
+        }
+
+        $year = $request->year;
+        $term = $request->term;
+
+        $students = $query->get()->map(function ($student) use ($year, $term) {
+            $student->total_fees = $student->getTotalFees($year, $term);
+            $student->total_paid = $student->getTotalPaid($year, $term);
+            $student->balance = $student->getBalance($year, $term);
+            return $student;
+        });
+
+        // Optionally filter to only students with balance > 0
+        if ($request->filled('only_with_balance')) {
+            $students = $students->filter(fn($s) => $s->balance > 0)->values();
+        }
+
+        $pdf = Pdf::loadView('pdf.student-balances', [
+            'title' => 'Student Balance Report',
+            'generatedAt' => now()->format('d M Y, H:i'),
+            'totalStudents' => $students->count(),
+            'students' => $students,
+            'filters' => [
+                'year' => $year,
+                'term' => $term,
+                'grade' => $request->grade_id ? Grade::find($request->grade_id)?->name : null,
+            ],
+        ]);
+
+        return $pdf->download('student_balances_report.pdf');
+    }
+
+    public function balanceReportPage()
+    {
+
+        $grades = Grade::orderBy('level')->get(['id', 'name']);
+        $terms = Fee::distinct()->pluck('term')->filter()->values();
+
+        return Inertia::render('Students/BalanceReport', [
+            'grades' => $grades,
+            'terms' => $terms,
+        ]);
+    }
 }

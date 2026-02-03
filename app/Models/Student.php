@@ -131,4 +131,52 @@ class Student extends Model
         $maxGradeLevel = SystemSetting::maxGradeLevel();
         return $this->grade && $this->grade->id >= $maxGradeLevel;
     }
+
+    // Add to Student.php
+
+    /**
+     * Get total fees for student's grade for a specific term/year
+     */
+    public function getTotalFees(?string $year = null, ?string $term = null): float
+    {
+        $query = Fee::where('grade_id', $this->grade_id);
+
+        if ($term) {
+            $query->where('term', $term);
+        }
+        if ($year) {
+            $query->whereYear('due_date', $year);
+        }
+
+        return (float) $query->sum('amount');
+    }
+
+    /**
+     * Get total payments made for a specific term/year
+     */
+    public function getTotalPaid(?string $year = null, ?string $term = null): float
+    {
+        $query = $this->feePayments()->with('fee');
+
+        if ($term || $year) {
+            $query->whereHas('fee', function ($q) use ($term, $year) {
+                if ($term) {
+                    $q->where('term', $term);
+                }
+                if ($year) {
+                    $q->whereYear('due_date', $year);
+                }
+            });
+        }
+
+        return (float) $query->sum('amount_paid');
+    }
+
+    /**
+     * Get balance (fees - payments)
+     */
+    public function getBalance(?string $year = null, ?string $term = null): float
+    {
+        return $this->getTotalFees($year, $term) - $this->getTotalPaid($year, $term);
+    }
 }

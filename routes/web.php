@@ -15,6 +15,12 @@ Route::get('/', function () {
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+
+Route::get('/students/balance-report', [StudentController::class, 'balanceReportPage'])
+    ->name('students.balance-report.page');
+
+Route::get('/students/balance-report/download', [StudentController::class, 'balanceReport'])
+    ->name('students.balance-report.download');
 // Students routes - IMPORTANT: GET routes must come before PUT/DELETE routes
 Route::get('/students', [StudentController::class, 'index'])->name('students.index');
 Route::get('/students/export/pdf', [StudentController::class, 'exportPdf'])->name('students.export.pdf');
@@ -46,5 +52,7 @@ Route::post('/student-progression/demote-grade', [StudentProgressionController::
 Route::post('/student-progression/start-new-year', [StudentProgressionController::class, 'startNewYear'])->name('student-progression.start-new-year');
 Route::post('/student-progression/graduate-student/{student}', [StudentProgressionController::class, 'graduateStudent'])->name('student-progression.graduate-student');
 Route::put('/student-progression/settings', [StudentProgressionController::class, 'updateSettings'])->name('student-progression.update-settings');
+
+
 
 require __DIR__ . '/settings.php';
