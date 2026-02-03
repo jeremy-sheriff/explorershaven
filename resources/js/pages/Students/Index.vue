@@ -379,24 +379,34 @@ const formatDate = (date: string) => {
                 <div class="p-6">
                     <div class="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <h2 class="text-xl font-semibold">Students</h2>
-                        <div class="flex flex-wrap gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                @click="exportToPDF"
-                                :disabled="exportingPDF || studentsList.length === 0"
-                                class="gap-2"
-                            >
-                                <Download class="h-4 w-4" />
-                                {{ exportingPDF ? 'Exporting...' : 'Export PDF' }}
-                            </Button>
-                            <button
-                                @click="handleCreate"
-                                class="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
-                            >
-                                + Add Student
-                            </button>
-                        </div>
+                      <div class="flex flex-wrap gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            as="a"
+                            href="/students/balance-report"
+                            class="gap-2"
+                        >
+                          <FileText class="h-4 w-4" />
+                          Balance Report
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            @click="exportToPDF"
+                            :disabled="exportingPDF || studentsList.length === 0"
+                            class="gap-2"
+                        >
+                          <Download class="h-4 w-4" />
+                          {{ exportingPDF ? 'Exporting...' : 'Export PDF' }}
+                        </Button>
+                        <button
+                            @click="handleCreate"
+                            class="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
+                        >
+                          + Add Student
+                        </button>
+                      </div>
                     </div>
 
                     <!-- Filters Section -->
