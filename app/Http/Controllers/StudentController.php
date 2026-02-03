@@ -61,6 +61,18 @@ class StudentController extends Controller
         ]);
     }
 
+    public function balanceReportPage()
+    {
+
+        $grades = Grade::orderBy('level')->get(['id', 'name']);
+        $terms = Fee::distinct()->pluck('term')->filter()->values();
+
+        return Inertia::render('Students/BalanceReport', [
+            'grades' => $grades,
+            'terms' => $terms,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -317,15 +329,5 @@ class StudentController extends Controller
         return $pdf->download('student_balances_report.pdf');
     }
 
-    public function balanceReportPage()
-    {
 
-        $grades = Grade::orderBy('level')->get(['id', 'name']);
-        $terms = Fee::distinct()->pluck('term')->filter()->values();
-
-        return Inertia::render('Students/BalanceReport', [
-            'grades' => $grades,
-            'terms' => $terms,
-        ]);
-    }
 }
